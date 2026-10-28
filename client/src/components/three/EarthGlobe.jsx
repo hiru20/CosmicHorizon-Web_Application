@@ -28,10 +28,10 @@ const latLngToVector3 = (lat, lng, radius) => {
 };
 
 /** Static image shown when WebGL is unavailable */
-const GlobeFallback = ({ className }) => (
+const GlobeFallback = ({ className, colorful }) => (
   <div className={`relative flex items-center justify-center ${className}`} aria-hidden="true">
     <img
-      src={NIGHT_TEXTURE}
+      src={colorful ? DAY_TEXTURE : NIGHT_TEXTURE}
       alt=""
       className="w-[78%] aspect-square rounded-full object-cover object-[35%_50%] opacity-90 [mask-image:radial-gradient(circle,black_68%,transparent_70%)]"
     />
@@ -45,11 +45,18 @@ const GlobeFallback = ({ className }) => (
  * - `trajectory`: [lat, lng] pairs drawn as a fading signal-orange trail
  * Drag to rotate. Rendering pauses off-screen; every GL resource is disposed on unmount.
  */
-const EarthGlobe = ({ issPosition = null, trajectory = [], className = '', label = 'Interactive 3D Earth showing the International Space Station' }) => {
+const EarthGlobe = ({
+  issPosition = null,
+  trajectory = [],
+  tone = 'matte', // 'matte' (dark, night-side city lights) | 'color' (sunlit, full colour, blue atmosphere)
+  className = '',
+  label = 'Interactive 3D Earth showing the International Space Station',
+}) => {
   const mountRef = useRef(null);
   const sceneRef = useRef(null);
   const [supported] = useState(hasWebGL);
   const followIss = !!issPosition;
+  const colorful = tone === 'color';
 
   useEffect(() => {
     if (!supported || !mountRef.current) return undefined;
@@ -85,8 +92,11 @@ const EarthGlobe = ({ issPosition = null, trajectory = [], className = '', label
       t.anisotropy = Math.min(4, renderer.capabilities.getMaxAnisotropy());
     });
 
-    // Sun from behind-left: most of the visible face sits in night, showing city lights
-    const sunDir = new THREE.Vector3(-1, 0.25, -0.55).normalize();
+    // Matte: sun from behind-left, so the visible face sits in night and shows city lights.
+    // Colour: sun from front-left, so the visible face is sunlit with a night edge on the right.
+    const sunDir = colorful
+      ? new THREE.Vector3(-0.65, 0.3, 0.7).normalize()
+      : new THREE.Vector3(-1, 0.25, -0.55).normalize();
 
     const earthMaterial = track(
       new THREE.ShaderMaterial({
@@ -94,6 +104,7 @@ const EarthGlobe = ({ issPosition = null, trajectory = [], className = '', label
           dayMap: { value: dayMap },
           nightMap: { value: nightMap },
           sunDir: { value: sunDir },
+          colorful: { value: colorful ? 1.0 : 0.0 },
         },
         vertexShader: `
           varying vec2 vUv;
@@ -110,26 +121,41 @@ const EarthGlobe = ({ issPosition = null, trajectory = [], className = '', label
           uniform sampler2D dayMap;
           uniform sampler2D nightMap;
           uniform vec3 sunDir;
+          uniform float colorful;
           varying vec2 vUv;
           varying vec3 vNormalW;
           varying vec3 vViewDir;
           void main() {
             vec3 n = normalize(vNormalW);
             float d = dot(n, sunDir);
-            float dayMix = smoothstep(-0.12, 0.3, d);
+            float rim = pow(1.0 - max(dot(n, vViewDir), 0.0), 4.0);
 
             vec3 day = texture2D(dayMap, vUv).rgb;
-            float g = dot(day, vec3(0.299, 0.587, 0.114));
-            vec3 matte = mix(vec3(g), day, 0.25) * (0.08 + 0.5 * max(d, 0.0));
-
             vec3 lights = texture2D(nightMap, vUv).rgb;
             float li = pow(dot(lights, vec3(0.333)), 1.6);
-            vec3 night = vec3(1.0, 0.62, 0.38) * li * 1.35 + vec3(0.006, 0.008, 0.012);
+            vec3 color;
 
-            vec3 color = mix(night, matte, dayMix);
-            // hairline limb: a faint cold rim, not a glow
-            float rim = pow(1.0 - max(dot(n, vViewDir), 0.0), 4.0);
-            color += vec3(0.55, 0.6, 0.66) * rim * 0.12;
+            if (colorful > 0.5) {
+              // Full colour: lit oceans and continents, a little extra saturation
+              float g = dot(day, vec3(0.299, 0.587, 0.114));
+              vec3 vivid = mix(vec3(g), day, 1.25);
+              vec3 lit = vivid * (0.18 + 1.15 * max(d, 0.0));
+              // Specular glint on the oceans (dark, blue-dominant texels)
+              float ocean = 1.0 - smoothstep(0.0, 0.05, day.r - day.b * 0.6);
+              vec3 halfV = normalize(sunDir + vViewDir);
+              lit += vec3(0.6, 0.75, 1.0) * pow(max(dot(n, halfV), 0.0), 40.0) * ocean * 0.5;
+              vec3 night = vec3(1.0, 0.72, 0.45) * li * 1.6 + vec3(0.01, 0.015, 0.03);
+              color = mix(night, lit, smoothstep(-0.2, 0.25, d));
+              // Blue atmospheric scattering at the limb, brighter on the day side
+              color += vec3(0.3, 0.6, 1.0) * rim * (0.35 + 0.65 * smoothstep(-0.3, 0.5, d));
+            } else {
+              float g = dot(day, vec3(0.299, 0.587, 0.114));
+              vec3 matte = mix(vec3(g), day, 0.25) * (0.08 + 0.5 * max(d, 0.0));
+              vec3 night = vec3(1.0, 0.62, 0.38) * li * 1.35 + vec3(0.006, 0.008, 0.012);
+              color = mix(night, matte, smoothstep(-0.12, 0.3, d));
+              // hairline limb: a faint cold rim, not a glow
+              color += vec3(0.55, 0.6, 0.66) * rim * 0.12;
+            }
             gl_FragColor = vec4(color, 1.0);
             #include <colorspace_fragment>
           }`,
@@ -137,6 +163,38 @@ const EarthGlobe = ({ issPosition = null, trajectory = [], className = '', label
     );
     const earthGeometry = track(new THREE.SphereGeometry(1, 96, 96));
     globe.add(new THREE.Mesh(earthGeometry, earthMaterial));
+
+    // Colour mode: soft blue atmosphere shell just outside the surface
+    if (colorful) {
+      const atmosphereGeometry = track(new THREE.SphereGeometry(1.08, 64, 64));
+      const atmosphereMaterial = track(
+        new THREE.ShaderMaterial({
+          uniforms: { sunDir: { value: sunDir } },
+          transparent: true,
+          side: THREE.BackSide,
+          blending: THREE.AdditiveBlending,
+          depthWrite: false,
+          vertexShader: `
+            varying vec3 vNormalW;
+            varying vec3 vNormalV;
+            void main() {
+              vNormalW = normalize(mat3(modelMatrix) * normal);
+              vNormalV = normalize(normalMatrix * normal);
+              gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0);
+            }`,
+          fragmentShader: `
+            uniform vec3 sunDir;
+            varying vec3 vNormalW;
+            varying vec3 vNormalV;
+            void main() {
+              float intensity = pow(0.62 - dot(vNormalV, vec3(0.0, 0.0, 1.0)), 3.0);
+              float sunSide = 0.35 + 0.65 * smoothstep(-0.4, 0.6, dot(normalize(vNormalW), sunDir));
+              gl_FragColor = vec4(0.32, 0.62, 1.0, 1.0) * intensity * sunSide;
+            }`,
+        })
+      );
+      scene.add(new THREE.Mesh(atmosphereGeometry, atmosphereMaterial));
+    }
 
     // ISS point: small signal-orange square-ish dot with a faint ring
     const marker = new THREE.Group();
@@ -258,7 +316,7 @@ const EarthGlobe = ({ issPosition = null, trajectory = [], className = '', label
       if (renderer.domElement.parentNode === mount) mount.removeChild(renderer.domElement);
       sceneRef.current = null;
     };
-  }, [supported, followIss]);
+  }, [supported, followIss, colorful]);
 
   // Update ISS point and trail from real telemetry without rebuilding the scene
   useEffect(() => {
@@ -282,7 +340,7 @@ const EarthGlobe = ({ issPosition = null, trajectory = [], className = '', label
     }
   }, [issPosition, trajectory]);
 
-  if (!supported) return <GlobeFallback className={className} />;
+  if (!supported) return <GlobeFallback className={className} colorful={colorful} />;
 
   return <div ref={mountRef} className={`relative cursor-grab active:cursor-grabbing ${className}`} role="img" aria-label={label} />;
 };
