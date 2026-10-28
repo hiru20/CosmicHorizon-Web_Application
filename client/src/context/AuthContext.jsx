@@ -20,10 +20,16 @@ export const AuthProvider = ({ children }) => {
           setUser(profile);
           setToken(storedToken);
         } catch (error) {
-          console.warn('[Auth Initialization] Session expired or invalid');
-          localStorage.removeItem('cosmic_token');
           setUser(null);
-          setToken(null);
+          // Only discard the token when the server actually rejected it. A network
+          // error (API restarting, offline) must not silently log the user out.
+          if (error.status === 401 || error.status === 404) {
+            console.warn('[Auth Initialization] Session expired or invalid');
+            localStorage.removeItem('cosmic_token');
+            setToken(null);
+          } else {
+            console.warn('[Auth Initialization] Could not reach the API; keeping session for retry');
+          }
         }
       }
       setLoading(false);

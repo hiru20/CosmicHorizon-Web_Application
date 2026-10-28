@@ -134,7 +134,7 @@ const LoginPage = () => {
                 <p className="text-sm text-fg-muted leading-relaxed">
                   Enter the 6-digit code sent to <span className="text-fg">{email}</span>.
                 </p>
-                <div className="flex items-end gap-3">
+                <form onSubmit={handleVerifyCode} className="flex items-end gap-3">
                   <label htmlFor="login-otp" className="sr-only">
                     Verification code
                   </label>
@@ -151,15 +151,15 @@ const LoginPage = () => {
                     className="field flex-1 font-mono text-2xl text-fg tracking-[0.5em] placeholder-fg-faint"
                   />
                   <Button
+                    type="submit"
                     variant="secondary"
                     size="sm"
                     disabled={isVerifyingCode || otpCode.length < 6}
                     loading={isVerifyingCode}
-                    onClick={handleVerifyCode}
                   >
                     Verify
                   </Button>
-                </div>
+                </form>
                 <Button variant="link" onClick={handleResend} disabled={isResending}>
                   {isResending ? 'Sending...' : 'Resend verification email'}
                 </Button>
