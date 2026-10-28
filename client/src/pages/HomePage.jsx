@@ -140,7 +140,7 @@ const HomePage = () => {
           >
             <div className="absolute inset-0 translate-x-[22%] lg:translate-x-0">
               <Suspense fallback={<GlobePlaceholder />}>
-                <EarthGlobe className="w-full h-full" />
+                <EarthGlobe tone="color" className="w-full h-full" />
               </Suspense>
             </div>
 
