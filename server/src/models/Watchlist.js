@@ -41,6 +41,16 @@ const watchlistSchema = new mongoose.Schema(
       type: String,
       default: '',
     },
+    priority: {
+      type: String,
+      enum: ['high', 'medium', 'low'],
+      default: 'medium',
+    },
+    notes: {
+      type: String,
+      default: '',
+      maxlength: 500,
+    },
   },
   {
     timestamps: true,

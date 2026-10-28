@@ -134,3 +134,57 @@ The client will open at: `http://localhost:5173`
 
 ---
 
+
+
+---
+
+## Database Design (ERD)
+
+```mermaid
+erDiagram
+    USER ||--o{ FAVORITE : saves
+    USER ||--o{ WATCHLIST : tracks
+    USER {
+        ObjectId _id PK
+        string name
+        string email UK
+        string password "bcrypt hash"
+        string avatar
+        string bio
+        date createdAt
+    }
+    FAVORITE {
+        ObjectId _id PK
+        ObjectId user FK
+        string itemType "apod|mars|launch|satellite"
+        string itemId
+        string title
+        string description
+        string imageUrl
+        string notes "max 500, editable"
+        date createdAt
+    }
+    WATCHLIST {
+        ObjectId _id PK
+        ObjectId user FK
+        string launchId
+        string launchName
+        string launchDate
+        string agency
+        string rocket
+        string priority "high|medium|low, editable"
+        string notes "max 500, editable"
+    }
+```
+
+Unique compound indexes: `Favorite(user, itemType, itemId)` and `Watchlist(user, launchId)`.
+
+## CRUD Operations Map
+
+| Entity | Create | Read | Update | Delete |
+|:--|:--|:--|:--|:--|
+| User | `POST /api/auth/register` | `GET /api/auth/profile` | `PUT /api/auth/profile` | - |
+| Favorite | `POST /api/user/favorites` (also the "Add Custom Space Note" form) | `GET /api/user/favorites` (sortable on Dashboard) | `PATCH /api/user/favorites/:id` (edit notes) | `DELETE /api/user/favorites/:id` (confirmation modal) |
+| Watchlist | `POST /api/user/watchlist` | `GET /api/user/watchlist` | `PATCH /api/user/watchlist/:id` (priority, notes) | `DELETE /api/user/watchlist/:id` (confirmation modal) |
+
+Run the update tests with `npm run test:update` in `server/`.

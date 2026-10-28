@@ -62,6 +62,40 @@ export const addFavorite = async (req, res, next) => {
 };
 
 /**
+ * @desc    Update personal notes on a favorite item
+ * @route   PATCH /api/user/favorites/:id
+ * @access  Private
+ */
+export const updateFavorite = async (req, res, next) => {
+  try {
+    const { id } = req.params;
+    const { notes } = req.body;
+
+    if (notes === undefined) {
+      return errorResponse(res, 'notes field is required', 400);
+    }
+
+    if (notes.length > 500) {
+      return errorResponse(res, 'Notes cannot exceed 500 characters', 400);
+    }
+
+    const favorite = await Favorite.findOneAndUpdate(
+      { _id: id, user: req.user._id },
+      { notes: notes.trim() },
+      { new: true }
+    );
+
+    if (!favorite) {
+      return errorResponse(res, 'Favorite item not found', 404);
+    }
+
+    return successResponse(res, favorite, 'Favorite notes updated successfully');
+  } catch (error) {
+    next(error);
+  }
+};
+
+/**
  * @desc    Remove an item from favorites
  * @route   DELETE /api/user/favorites/:id
  * @access  Private
@@ -138,6 +172,49 @@ export const addToWatchlist = async (req, res, next) => {
     });
 
     return successResponse(res, item, 'Added to watchlist', 201);
+  } catch (error) {
+    next(error);
+  }
+};
+
+/**
+ * @desc    Update priority and notes on a watchlist item
+ * @route   PATCH /api/user/watchlist/:id
+ * @access  Private
+ */
+export const updateWatchlistItem = async (req, res, next) => {
+  try {
+    const { id } = req.params;
+    const { priority, notes } = req.body;
+
+    const validPriorities = ['high', 'medium', 'low'];
+    if (priority && !validPriorities.includes(priority)) {
+      return errorResponse(res, 'priority must be high, medium, or low', 400);
+    }
+
+    if (notes && notes.length > 500) {
+      return errorResponse(res, 'Notes cannot exceed 500 characters', 400);
+    }
+
+    const updateFields = {};
+    if (priority !== undefined) updateFields.priority = priority;
+    if (notes !== undefined) updateFields.notes = notes.trim();
+
+    if (Object.keys(updateFields).length === 0) {
+      return errorResponse(res, 'Provide priority or notes to update', 400);
+    }
+
+    const item = await Watchlist.findOneAndUpdate(
+      { _id: id, user: req.user._id },
+      updateFields,
+      { new: true }
+    );
+
+    if (!item) {
+      return errorResponse(res, 'Watchlist item not found', 404);
+    }
+
+    return successResponse(res, item, 'Watchlist item updated successfully');
   } catch (error) {
     next(error);
   }
