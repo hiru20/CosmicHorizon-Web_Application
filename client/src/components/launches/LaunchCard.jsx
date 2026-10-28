@@ -5,13 +5,13 @@ import WatchToggle from './WatchToggle';
 import Badge from '../common/Badge';
 import Button from '../common/Button';
 
-const REMINDER_LABELS = {
+export const REMINDER_LABELS = {
   '15m': '15m before',
   '1h': '1h before',
   '24h': '1d before',
 };
 
-const FALLBACK_IMAGE = 'https://images.unsplash.com/photo-1517976487502-53b7c2fb2b6a?w=800';
+export const FALLBACK_IMAGE = 'https://images.unsplash.com/photo-1517976487502-53b7c2fb2b6a?w=800';
 
 const getStatusVariant = (statusName) => {
   const s = (statusName || '').toLowerCase();

@@ -5,6 +5,8 @@ import { useAuth } from '../context/AuthContext';
 import { useNotification } from '../context/NotificationContext';
 import LaunchFilter from '../components/launches/LaunchFilter';
 import LaunchCard, { LaunchStatusTag, MANIFEST_COLUMNS } from '../components/launches/LaunchCard';
+import LaunchGalleryCard from '../components/launches/LaunchGalleryCard';
+import { List, LayoutGrid } from 'lucide-react';
 import CountdownTimer from '../components/launches/CountdownTimer';
 import WatchToggle from '../components/launches/WatchToggle';
 import Modal from '../components/common/Modal';
@@ -13,7 +15,22 @@ import Button from '../components/common/Button';
 import SectionHeader from '../components/common/SectionHeader';
 import LiveDot from '../components/common/LiveDot';
 import EmptyState from '../components/common/EmptyState';
-import { SkeletonRows } from '../components/common/Skeleton';
+import { SkeletonRows, SkeletonGrid } from '../components/common/Skeleton';
+
+const VIEW_STORAGE_KEY = 'cosmic_launch_view';
+const VIEW_OPTIONS = [
+  { id: 'list', label: 'List', icon: List },
+  { id: 'gallery', label: 'Gallery', icon: LayoutGrid },
+];
+
+// Remembered per browser; falls back to the list view if storage is unavailable
+const readStoredView = () => {
+  try {
+    return localStorage.getItem(VIEW_STORAGE_KEY) === 'gallery' ? 'gallery' : 'list';
+  } catch {
+    return 'list';
+  }
+};
 import { Bell, BellRing } from 'lucide-react';
 
 const REMINDER_OPTIONS = [
@@ -50,6 +67,16 @@ const LaunchesPage = () => {
 
   // UI only: which manifest row is expanded
   const [expandedId, setExpandedId] = useState(null);
+  const [view, setView] = useState(readStoredView); // UI only: 'list' | 'gallery'
+
+  const changeView = (next) => {
+    setView(next);
+    try {
+      localStorage.setItem(VIEW_STORAGE_KEY, next);
+    } catch {
+      // storage unavailable: the choice just won't persist
+    }
+  };
 
   // Fetch launches
   const fetchLaunches = useCallback(async () => {
@@ -320,17 +347,59 @@ const LaunchesPage = () => {
             Manifest
           </h2>
           <span className="flex-1 h-px bg-line" aria-hidden="true" />
-          {!loading && <span className="label text-fg-faint tabular-nums">{String(launches.length).padStart(2, '0')} entries</span>}
+          {!loading && <span className="hidden sm:inline label text-fg-faint tabular-nums">{String(launches.length).padStart(2, '0')} entries</span>}
+
+          {/* View switch */}
+          <div role="group" aria-label="Manifest view" className="flex items-center p-1 rounded-btn border border-line surface">
+            {VIEW_OPTIONS.map(({ id, label, icon: Icon }) => {
+              const active = view === id;
+              return (
+                <button
+                  key={id}
+                  type="button"
+                  onClick={() => changeView(id)}
+                  aria-pressed={active}
+                  className={`inline-flex items-center gap-1.5 h-8 px-3 rounded-lg text-[0.8125rem] font-semibold transition-colors ${
+                    active ? 'btn-gradient' : 'text-fg-muted hover:text-fg'
+                  }`}
+                >
+                  <Icon className="w-3.5 h-3.5" strokeWidth={2} aria-hidden="true" />
+                  <span className="hidden sm:inline">{label}</span>
+                  <span className="sm:hidden sr-only">{label}</span>
+                </button>
+              );
+            })}
+          </div>
         </div>
 
         {loading ? (
-          <SkeletonRows rows={6} cols={5} />
+          view === 'gallery' ? (
+            <SkeletonGrid count={6} className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5" />
+          ) : (
+            <SkeletonRows rows={6} cols={5} />
+          )
         ) : launches.length === 0 ? (
           <EmptyState
             code="NO MATCHING ENTRIES"
             title="Nothing on the manifest for this query."
             description="Try adjusting your search keywords, agency filter, or status criteria."
           />
+        ) : view === 'gallery' ? (
+          <ol aria-label="Launch gallery" className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5">
+            {launches.map((launch, i) => (
+              <LaunchGalleryCard
+                key={launch.id}
+                featured={i === 0}
+                index={String(i + 1).padStart(2, '0')}
+                launch={launch}
+                isInWatchlist={watchlistIds.has(String(launch.id))}
+                reminderTime={reminders[String(launch.id)]}
+                onToggleWatchlist={handleToggleWatchlist}
+                onOpenReminder={handleOpenReminder}
+                onSelectDetails={(l) => setSelectedLaunch(l)}
+              />
+            ))}
+          </ol>
         ) : (
           <div className="border-t border-line">
             {/* Column header (md+) */}
