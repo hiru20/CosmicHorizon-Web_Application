@@ -188,3 +188,12 @@ Unique compound indexes: `Favorite(user, itemType, itemId)` and `Watchlist(user,
 | Watchlist | `POST /api/user/watchlist` | `GET /api/user/watchlist` | `PATCH /api/user/watchlist/:id` (priority, notes) | `DELETE /api/user/watchlist/:id` (confirmation modal) |
 
 Run the update tests with `npm run test:update` in `server/`.
+
+## Email Verification
+
+1. POST /api/auth/register creates the user with isVerified: false and emails a link (/verify-email/:token). No JWT is issued yet.
+2. The token is random (32 bytes); only its SHA-256 hash is stored, and it expires after 24 hours and works once.
+3. GET /api/auth/verify/:token marks the account verified. POST /api/auth/resend-verification sends a new link.
+4. POST /api/auth/login returns 403 until the email is verified.
+5. Set SMTP_HOST, SMTP_PORT, SMTP_USER, SMTP_PASS in server/.env (for example Mailtrap or a Gmail app password). If they are empty, the link is printed in the server console (dev mode), so the project still runs without an email account.
+6. The seeded demo account is pre-verified.

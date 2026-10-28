@@ -1,7 +1,9 @@
 import React, { useState } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
+import { Link } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
-import { Orbit, UserPlus, Lock, Mail, User } from 'lucide-react';
+import { authService } from '../services/authService';
+import { useNotification } from '../context/NotificationContext';
+import { Orbit, UserPlus, Lock, Mail, User, MailCheck } from 'lucide-react';
 
 const RegisterPage = () => {
   const [name, setName] = useState('');
@@ -15,7 +17,24 @@ const RegisterPage = () => {
   const [fieldErrors, setFieldErrors] = useState({});
 
   const { register } = useAuth();
-  const navigate = useNavigate();
+  const { notifySuccess, notifyError } = useNotification();
+
+  // Set after a successful sign-up: { email, devLink }
+  const [registered, setRegistered] = useState(null);
+  const [isResending, setIsResending] = useState(false);
+
+  const handleResend = async () => {
+    setIsResending(true);
+    try {
+      const data = await authService.resendVerification(registered.email);
+      setRegistered((prev) => ({ ...prev, devLink: data?.devVerificationLink || prev.devLink }));
+      notifySuccess('A new verification link has been sent.');
+    } catch (error) {
+      notifyError(error.message || 'Could not resend email');
+    } finally {
+      setIsResending(false);
+    }
+  };
 
   // Validate a single field and return an error string (or '')
   const validateField = (field, value) => {
@@ -66,11 +85,54 @@ const RegisterPage = () => {
     setIsSubmitting(false);
 
     if (result.success) {
-      navigate('/dashboard');
+      setRegistered({
+        email: result.data?.email || email,
+        devLink: result.data?.devVerificationLink || '',
+      });
     } else {
       setErrorMsg(result.error || 'Registration failed.');
     }
   };
+
+  // After sign-up: ask the user to verify their email
+  if (registered) {
+    return (
+      <div className="min-h-[80vh] flex items-center justify-center px-4 py-12">
+        <div className="w-full max-w-md glass-panel p-8 rounded-3xl border border-slate-800 shadow-2xl text-center space-y-4">
+          <MailCheck className="w-12 h-12 text-cyan-400 mx-auto" />
+          <h2 className="text-2xl font-black text-white">Check Your Email</h2>
+          <p className="text-xs text-slate-400">
+            We sent a verification link to{' '}
+            <span className="text-slate-200 font-bold">{registered.email}</span>. Open it to activate your
+            account, then sign in. The link expires in 24 hours.
+          </p>
+
+          {registered.devLink && (
+            <div className="p-3 rounded-xl bg-amber-500/10 border border-amber-500/30 text-left">
+              <p className="text-[11px] font-bold text-amber-300 mb-1">Dev mode: email is not configured</p>
+              <a href={registered.devLink} className="text-[11px] text-cyan-400 break-all hover:underline">
+                {registered.devLink}
+              </a>
+            </div>
+          )}
+
+          <div className="flex flex-col gap-2 pt-2">
+            <button
+              type="button"
+              onClick={handleResend}
+              disabled={isResending}
+              className="px-4 py-2 rounded-xl text-xs font-semibold border border-slate-700 text-slate-300 hover:text-white disabled:opacity-50"
+            >
+              {isResending ? 'Sending...' : 'Resend verification email'}
+            </button>
+            <Link to="/login" className="text-xs text-cyan-400 font-bold hover:underline">
+              Already verified? Sign in
+            </Link>
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-[80vh] flex items-center justify-center px-4 py-12">

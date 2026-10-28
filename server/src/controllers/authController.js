@@ -1,9 +1,27 @@
+import crypto from 'crypto';
 import User from '../models/User.js';
 import { generateToken } from '../utils/generateToken.js';
 import { successResponse, errorResponse } from '../utils/responseHandler.js';
+import { sendVerificationEmail } from '../services/emailService.js';
+
+const VERIFICATION_HOURS = 24;
+
+const hashToken = (token) => crypto.createHash('sha256').update(token).digest('hex');
 
 /**
- * @desc    Register a new user
+ * Creates a fresh verification token for the user, stores only its hash,
+ * and emails the raw token. Returns the email service result.
+ */
+const issueVerification = async (user) => {
+  const rawToken = crypto.randomBytes(32).toString('hex');
+  user.verificationToken = hashToken(rawToken);
+  user.verificationExpires = new Date(Date.now() + VERIFICATION_HOURS * 60 * 60 * 1000);
+  await user.save();
+  return sendVerificationEmail(user, rawToken);
+};
+
+/**
+ * @desc    Register a new user and send a verification email
  * @route   POST /api/auth/register
  * @access  Public
  */
@@ -25,31 +43,96 @@ export const registerUser = async (req, res, next) => {
       return errorResponse(res, 'An account with this email already exists', 409);
     }
 
-    // Create user
+    // Create user (unverified until the email link is opened)
     const user = await User.create({
       name,
       email: email.toLowerCase(),
       password,
+      isVerified: false,
     });
 
-    const token = generateToken(user._id);
+    let emailResult = { sent: false };
+    try {
+      emailResult = await issueVerification(user);
+    } catch (mailError) {
+      console.error('[Email] Failed to send verification email:', mailError.message);
+    }
+
+    const data = {
+      email: user.email,
+      requiresVerification: true,
+    };
+    // Dev convenience only: expose the link when SMTP is not configured
+    if (emailResult.devLink && process.env.NODE_ENV !== 'production') {
+      data.devVerificationLink = emailResult.devLink;
+    }
 
     return successResponse(
       res,
-      {
-        user: {
-          id: user._id,
-          name: user.name,
-          email: user.email,
-          avatar: user.avatar,
-          bio: user.bio,
-          createdAt: user.createdAt,
-        },
-        token,
-      },
-      'User registered successfully',
+      data,
+      'Account created. Please check your email to verify your account.',
       201
     );
+  } catch (error) {
+    next(error);
+  }
+};
+
+/**
+ * @desc    Verify email address using the emailed token
+ * @route   GET /api/auth/verify/:token
+ * @access  Public
+ */
+export const verifyEmail = async (req, res, next) => {
+  try {
+    const user = await User.findOne({
+      verificationToken: hashToken(req.params.token),
+      verificationExpires: { $gt: new Date() },
+    }).select('+verificationToken +verificationExpires');
+
+    if (!user) {
+      return errorResponse(res, 'Verification link is invalid or has expired', 400);
+    }
+
+    user.isVerified = true;
+    user.verificationToken = undefined;
+    user.verificationExpires = undefined;
+    await user.save();
+
+    return successResponse(res, { email: user.email }, 'Email verified successfully. You can now log in.');
+  } catch (error) {
+    next(error);
+  }
+};
+
+/**
+ * @desc    Resend the verification email
+ * @route   POST /api/auth/resend-verification
+ * @access  Public
+ */
+export const resendVerification = async (req, res, next) => {
+  try {
+    const { email } = req.body;
+    if (!email) {
+      return errorResponse(res, 'Please provide your email', 400);
+    }
+
+    const user = await User.findOne({ email: email.toLowerCase() });
+
+    // Same response whether or not the account exists (no account enumeration)
+    const data = {};
+    if (user && user.isVerified === false) {
+      try {
+        const result = await issueVerification(user);
+        if (result.devLink && process.env.NODE_ENV !== 'production') {
+          data.devVerificationLink = result.devLink;
+        }
+      } catch (mailError) {
+        console.error('[Email] Failed to resend verification email:', mailError.message);
+      }
+    }
+
+    return successResponse(res, data, 'If an unverified account exists for this email, a new link has been sent.');
   } catch (error) {
     next(error);
   }
@@ -77,6 +160,11 @@ export const loginUser = async (req, res, next) => {
     const isMatch = await user.matchPassword(password);
     if (!isMatch) {
       return errorResponse(res, 'Invalid email or password', 401);
+    }
+
+    // Block login until the email is verified (only explicit false blocks)
+    if (user.isVerified === false) {
+      return errorResponse(res, 'Please verify your email before logging in', 403);
     }
 
     const token = generateToken(user._id);

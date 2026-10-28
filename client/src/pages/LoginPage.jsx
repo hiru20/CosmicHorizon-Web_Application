@@ -1,7 +1,9 @@
-﻿import React, { useState } from 'react';
+import React, { useState } from 'react';
 import { Link, useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { Orbit, LogIn, Lock, Mail, Sparkles } from 'lucide-react';
+import { authService } from '../services/authService';
+import { useNotification } from '../context/NotificationContext';
 
 const LoginPage = () => {
   const [email, setEmail] = useState('');
@@ -9,6 +11,24 @@ const LoginPage = () => {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [errorMsg, setErrorMsg] = useState('');
   const [fieldErrors, setFieldErrors] = useState({});
+  const [needsVerification, setNeedsVerification] = useState(false);
+  const [isResending, setIsResending] = useState(false);
+  const { notifySuccess, notifyError } = useNotification();
+
+  const handleResend = async () => {
+    setIsResending(true);
+    try {
+      const data = await authService.resendVerification(email);
+      notifySuccess('If the account exists, a new verification link was sent.');
+      if (data?.devVerificationLink) {
+        setErrorMsg(`Dev mode link: ${data.devVerificationLink}`);
+      }
+    } catch (error) {
+      notifyError(error.message || 'Could not resend email');
+    } finally {
+      setIsResending(false);
+    }
+  };
 
   const { login } = useAuth();
   const navigate = useNavigate();
@@ -35,6 +55,7 @@ const LoginPage = () => {
   const handleSubmit = async (e) => {
     e.preventDefault();
     setErrorMsg('');
+    setNeedsVerification(false);
 
     const errors = {
       email: validateField('email', email),
@@ -50,6 +71,7 @@ const LoginPage = () => {
     if (result.success) {
       navigate(destination, { replace: true });
     } else {
+      setNeedsVerification(result.status === 403);
       setErrorMsg(result.error || 'Login failed. Please check your credentials.');
     }
   };
@@ -81,6 +103,16 @@ const LoginPage = () => {
         {errorMsg && (
           <div className="mb-6 p-3 rounded-xl bg-rose-500/15 border border-rose-500/30 text-rose-300 text-xs text-center">
             {errorMsg}
+            {needsVerification && (
+              <button
+                type="button"
+                onClick={handleResend}
+                disabled={isResending}
+                className="block mx-auto mt-2 text-cyan-400 font-bold hover:underline disabled:opacity-50"
+              >
+                {isResending ? 'Sending...' : 'Resend verification email'}
+              </button>
+            )}
           </div>
         )}
 

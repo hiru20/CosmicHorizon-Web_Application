@@ -26,6 +26,7 @@ const seedDemoData = async () => {
       name: 'Commander Alex Vance',
       email: demoEmail,
       password: demoPassword,
+      isVerified: true, // demo account skips email verification
       bio: 'Astrophysics Researcher & Orbital Flight Commander. Tracking ISS telemetry and upcoming deep space missions.',
       avatar: 'https://images.unsplash.com/photo-1534447677768-be436bb09401?w=300&auto=format&fit=crop&q=80',
     });

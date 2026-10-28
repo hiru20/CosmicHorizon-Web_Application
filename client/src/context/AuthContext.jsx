@@ -44,22 +44,20 @@ export const AuthProvider = ({ children }) => {
         return { success: true };
       } catch (error) {
         notifyError(error.message || 'Login failed');
-        return { success: false, error: error.message };
+        return { success: false, error: error.message, status: error.status };
       }
     },
     [notifySuccess, notifyError]
   );
 
-  // Register handler
+  // Register handler: the account must be verified by email before login,
+  // so no token/session is created here.
   const register = useCallback(
     async (name, email, password) => {
       try {
         const data = await authService.register(name, email, password);
-        localStorage.setItem('cosmic_token', data.token);
-        setUser(data.user);
-        setToken(data.token);
-        notifySuccess(`Welcome aboard CosmicHorizon, ${data.user.name}!`);
-        return { success: true };
+        notifySuccess('Account created! Please verify your email.');
+        return { success: true, data };
       } catch (error) {
         notifyError(error.message || 'Registration failed');
         return { success: false, error: error.message };

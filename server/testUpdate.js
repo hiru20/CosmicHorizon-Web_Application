@@ -21,8 +21,11 @@ async function testUpdates() {
     };
 
     try {
-      const reg = await axios.post(`${baseURL}/auth/register`, { name: 'Updater', email, password: 'Password123!' });
-      const auth = { headers: { Authorization: `Bearer ${reg.data.data.token}` } };
+      await axios.post(`${baseURL}/auth/register`, { name: 'Updater', email, password: 'Password123!' });
+      // Registration now requires email verification: mark verified, then log in
+      await User.updateOne({ email }, { isVerified: true });
+      const login = await axios.post(`${baseURL}/auth/login`, { email, password: 'Password123!' });
+      const auth = { headers: { Authorization: `Bearer ${login.data.data.token}` } };
 
       const fav = (await axios.post(`${baseURL}/user/favorites`, { itemType: 'apod', itemId: 'u1', title: 'Test Fav', description: 'desc' }, auth)).data.data;
       const wl = (await axios.post(`${baseURL}/user/watchlist`, { launchId: 'l1', launchName: 'Test Launch', launchDate: new Date().toISOString() }, auth)).data.data;

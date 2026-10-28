@@ -17,12 +17,15 @@ async function testUserPersistence() {
 
       // 1. Register user
       console.log('1. Registering user for persistence test...');
-      const reg = await axios.post(`${baseURL}/auth/register`, {
+      await axios.post(`${baseURL}/auth/register`, {
         name: 'Major Tom',
         email: testEmail,
         password: testPassword,
       });
-      const token = reg.data.data.token;
+      // Registration now requires email verification: mark verified, then log in
+      await User.updateOne({ email: testEmail }, { isVerified: true });
+      const login = await axios.post(`${baseURL}/auth/login`, { email: testEmail, password: testPassword });
+      const token = login.data.data.token;
       const headers = { Authorization: `Bearer ${token}` };
 
       // 2. Add Favorite
@@ -106,8 +109,8 @@ async function testUserPersistence() {
 
       // Cleanup
       await User.deleteOne({ email: testEmail });
-      await Favorite.deleteMany({ user: reg.data.data.user.id });
-      await Watchlist.deleteMany({ user: reg.data.data.user.id });
+      await Favorite.deleteMany({ user: login.data.data.user.id });
+      await Watchlist.deleteMany({ user: login.data.data.user.id });
 
       console.log('\n=============================================');
       console.log('>>> ALL USER & DASHBOARD TESTS PASSED 100% <<<');

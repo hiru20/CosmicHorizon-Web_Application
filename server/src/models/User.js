@@ -35,6 +35,20 @@ const userSchema = new mongoose.Schema(
       default: 'Space enthusiast exploring the cosmos with CosmicHorizon.',
       maxlength: [200, 'Bio cannot exceed 200 characters'],
     },
+    // Email verification. Deliberately NO schema default: Mongoose would apply
+    // it to older documents too and lock them out. registerUser sets `false`
+    // explicitly, and only a literal `false` blocks login.
+    isVerified: {
+      type: Boolean,
+    },
+    verificationToken: {
+      type: String, // SHA-256 hash of the token emailed to the user
+      select: false,
+    },
+    verificationExpires: {
+      type: Date,
+      select: false,
+    },
   },
   {
     timestamps: true,

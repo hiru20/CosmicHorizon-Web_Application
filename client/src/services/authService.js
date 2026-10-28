@@ -11,6 +11,16 @@ export const authService = {
     return response.data;
   },
 
+  async verifyEmail(token) {
+    const response = await api.get(`/auth/verify/${token}`);
+    return response;
+  },
+
+  async resendVerification(email) {
+    const response = await api.post('/auth/resend-verification', { email });
+    return response.data;
+  },
+
   async getProfile() {
     const response = await api.get('/auth/profile');
     return response.data;
