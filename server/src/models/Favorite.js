@@ -30,6 +30,11 @@ const favoriteSchema = new mongoose.Schema(
       type: String,
       default: '',
     },
+    notes: {
+      type: String,
+      default: '',
+      maxlength: 500,
+    },
     extraData: {
       type: mongoose.Schema.Types.Mixed,
       default: {},

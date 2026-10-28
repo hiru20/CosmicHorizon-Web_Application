@@ -10,6 +10,7 @@
     "test": "node testAuth.js && node testSpace.js && node testUser.js",
     "test:auth": "node testAuth.js",
     "test:space": "node testSpace.js",
+    "test:update": "node testUpdate.js",
     "test:user": "node testUser.js",
     "seed": "node seedDemo.js",
     "db": "node viewDb.js"
