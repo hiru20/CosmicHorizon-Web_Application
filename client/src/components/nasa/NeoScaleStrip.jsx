@@ -54,7 +54,7 @@ const NeoScaleStrip = ({ asteroids, selectedIds = [], onToggle }) => {
                   selected
                     ? 'bg-signal border-signal'
                     : hazard
-                    ? 'bg-black border-danger'
+                    ? 'bg-ink border-danger'
                     : 'bg-fg-muted border-fg-muted'
                 }`}
                 aria-label={`${ast.name}: ${formatLd(ld)} lunar distances, ${Math.round(missKm(ast)).toLocaleString()} km${hazard ? ', potentially hazardous' : ''}`}

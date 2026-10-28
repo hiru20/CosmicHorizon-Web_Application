@@ -53,10 +53,10 @@ const ImageViewer = ({ isOpen, onClose, src, alt, kicker, title, meta = [], chil
       aria-modal="true"
       aria-labelledby={titleId}
       tabIndex={-1}
-      className="fixed inset-0 z-50 bg-black flex flex-col lg:flex-row animate-fade-in focus:outline-none"
+      className="fixed inset-0 z-50 bg-ink flex flex-col lg:flex-row animate-fade-in focus:outline-none"
     >
       {/* Stage */}
-      <div className="relative flex-1 min-h-[45vh] overflow-auto bg-black flex items-center justify-center">
+      <div className="relative flex-1 min-h-[45vh] overflow-auto bg-ink flex items-center justify-center">
         <img
           src={src}
           alt={alt}
@@ -65,7 +65,7 @@ const ImageViewer = ({ isOpen, onClose, src, alt, kicker, title, meta = [], chil
             zoomed ? 'max-w-none w-[180%] lg:w-[160%] cursor-zoom-out' : 'max-h-[100vh] max-w-full object-contain cursor-zoom-in'
           }`}
         />
-        <div className="absolute top-0 inset-x-0 h-12 flex items-center justify-between px-4 border-b border-line bg-black/80">
+        <div className="absolute top-0 inset-x-0 h-12 flex items-center justify-between px-4 border-b border-line bg-ink/80">
           <span className="label">{kicker}</span>
           <button
             type="button"
@@ -81,7 +81,7 @@ const ImageViewer = ({ isOpen, onClose, src, alt, kicker, title, meta = [], chil
       </div>
 
       {/* Metadata sidebar */}
-      <aside className="w-full lg:w-[24rem] flex-shrink-0 border-t lg:border-t-0 lg:border-l border-line bg-ink-900 flex flex-col max-h-[55vh] lg:max-h-none">
+      <aside className="w-full lg:w-[24rem] flex-shrink-0 border-t lg:border-t-0 lg:border-l border-line surface flex flex-col max-h-[55vh] lg:max-h-none">
         <div className="h-12 flex items-center justify-between pl-5 pr-2 border-b border-line flex-shrink-0">
           <span className="label text-fg-faint">Record</span>
           <button

@@ -117,7 +117,7 @@ const TrackerPage = () => {
       />
 
       {loading && !telemetry ? (
-        <div className="border border-line bg-ink-900">
+        <div className="border border-line surface">
           <Loader message="Contacting orbital telemetry nodes..." />
         </div>
       ) : (

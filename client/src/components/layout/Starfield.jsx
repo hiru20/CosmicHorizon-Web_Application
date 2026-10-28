@@ -33,7 +33,7 @@ const Starfield = () => {
         const x = rand() * w;
         const y = rand() * h;
         const r = rand() < 0.92 ? 0.5 : 0.9;
-        ctx.fillStyle = `rgba(237,237,237,${0.12 + rand() * 0.28})`;
+        ctx.fillStyle = rand() < 0.3 ? `rgba(147,197,253,${0.2 + rand() * 0.35})` : `rgba(226,236,255,${0.15 + rand() * 0.3})`;
         ctx.fillRect(x, y, r, r);
       }
     };

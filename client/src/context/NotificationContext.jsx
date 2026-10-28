@@ -41,7 +41,7 @@ export const NotificationProvider = ({ children }) => {
           <div
             key={toast.id}
             role={toast.type === 'error' ? 'alert' : 'status'}
-            className={`pointer-events-auto flex items-center gap-3 min-h-11 pl-3 pr-1 border bg-black transition-all duration-300 animate-slide-up ${
+            className={`pointer-events-auto flex items-center gap-3 min-h-11 pl-3 pr-1 border bg-ink transition-all duration-300 animate-slide-up ${
               toast.type === 'success'
                 ? 'border-line-strong text-live'
                 : toast.type === 'error'

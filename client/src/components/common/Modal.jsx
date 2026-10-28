@@ -46,7 +46,7 @@ const Modal = ({ isOpen, onClose, title, children, maxWidth = 'max-w-3xl' }) => 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-6 overflow-y-auto">
       {/* Backdrop */}
-      <div className="fixed inset-0 bg-black/85 animate-fade-in" onClick={onClose} aria-hidden="true" />
+      <div className="fixed inset-0 bg-ink/85 animate-fade-in" onClick={onClose} aria-hidden="true" />
 
       {/* Dialog */}
       <div
@@ -55,7 +55,7 @@ const Modal = ({ isOpen, onClose, title, children, maxWidth = 'max-w-3xl' }) => 
         aria-modal="true"
         aria-labelledby={titleId}
         tabIndex={-1}
-        className={`relative w-full ${maxWidth} bg-ink-900 border border-line-strong crosshairs z-10 my-8 animate-zoom-in focus:outline-none`}
+        className={`relative w-full ${maxWidth} surface-raised rounded-xl border border-line-strong crosshairs z-10 my-8 animate-zoom-in focus:outline-none`}
       >
         {/* Header strip */}
         <div className="flex items-center justify-between gap-4 pl-5 sm:pl-6 pr-2 h-14 border-b border-line">

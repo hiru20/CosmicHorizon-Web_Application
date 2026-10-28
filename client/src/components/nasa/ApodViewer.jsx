@@ -102,7 +102,7 @@ const ApodViewer = ({ isFavorited, onToggleFavorite }) => {
       ) : (
         <article className="grid grid-cols-12 gap-x-6 gap-y-8">
           {/* Full-bleed media with mono caption overlay */}
-          <figure className="group col-span-12 lg:col-span-8 relative border border-line bg-black crosshairs">
+          <figure className="group col-span-12 lg:col-span-8 relative border border-line bg-ink crosshairs">
             {apod.media_type === 'video' ? (
               <iframe src={apod.url} title={apod.title} className="w-full aspect-video border-0" allowFullScreen />
             ) : (
@@ -117,14 +117,14 @@ const ApodViewer = ({ isFavorited, onToggleFavorite }) => {
                   type="button"
                   onClick={() => setShowHdModal(true)}
                   aria-label="Open full-screen viewer"
-                  className="absolute top-3 right-3 h-9 px-3 flex items-center gap-2 bg-black/80 border border-line-strong label text-fg hover:border-fg-muted"
+                  className="absolute top-3 right-3 h-9 px-3 flex items-center gap-2 bg-ink/80 border border-line-strong label text-fg hover:border-fg-muted"
                 >
                   <Maximize2 className="w-3.5 h-3.5" strokeWidth={1.5} aria-hidden="true" />
                   <span>View</span>
                 </button>
               </>
             )}
-            <figcaption className="absolute left-0 bottom-0 max-w-full bg-black/85 border-t border-r border-line px-4 py-3 font-mono text-[0.6875rem] uppercase tracking-label text-fg-muted flex flex-wrap gap-x-4 gap-y-1">
+            <figcaption className="absolute left-0 bottom-0 max-w-full bg-ink/85 border-t border-r border-line px-4 py-3 font-mono text-[0.6875rem] uppercase tracking-label text-fg-muted flex flex-wrap gap-x-4 gap-y-1">
               <span className="text-signal">{apod.date}</span>
               <span className="text-fg truncate max-w-[22rem]">{apod.title}</span>
               {apod.copyright && <span className="truncate max-w-[16rem]">© {apod.copyright}</span>}

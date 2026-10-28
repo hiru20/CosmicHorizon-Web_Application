@@ -4,7 +4,7 @@ const Skeleton = ({ className = 'h-4 w-full' }) => <div className={`skeleton ${c
 
 /** Card-shaped placeholder that mirrors image-card layouts */
 export const SkeletonCard = ({ withImage = true, imageClassName = 'aspect-[4/3]' }) => (
-  <div className="border border-line bg-ink-900" aria-hidden="true">
+  <div className="rounded-xl overflow-hidden border border-line surface" aria-hidden="true">
     {withImage && <Skeleton className={`w-full ${imageClassName}`} />}
     <div className="p-4 space-y-3">
       <Skeleton className="h-2.5 w-20" />

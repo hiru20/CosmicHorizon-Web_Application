@@ -76,7 +76,7 @@ const LaunchCard = ({
   );
 
   return (
-    <li className={`group relative border-b border-line transition-colors ${expanded ? 'bg-ink-900' : 'hover:bg-ink-800'}`}>
+    <li className={`group relative border-b border-line transition-colors ${expanded ? 'surface' : 'hover:bg-ink-800'}`}>
       {/* Left signal hairline on hover / when open */}
       <span
         className={`absolute left-0 top-0 bottom-0 w-px bg-signal origin-top transition-transform duration-300 ease-out ${
@@ -170,7 +170,7 @@ const LaunchCard = ({
                   e.target.src = FALLBACK_IMAGE;
                 }}
               />
-              <span className="absolute bottom-0 left-0 right-0 px-3 py-2 bg-black/80 label text-fg-muted truncate">{provider}</span>
+              <span className="absolute bottom-0 left-0 right-0 px-3 py-2 bg-ink/80 label text-fg-muted truncate">{provider}</span>
             </div>
 
             <div className="col-span-12 md:col-span-5 space-y-3">

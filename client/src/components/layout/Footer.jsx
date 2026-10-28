@@ -21,7 +21,7 @@ const CREDITS = [
 /** Colophon-style footer: credits, coordinates, version. */
 const Footer = () => {
   return (
-    <footer className="relative mt-32 border-t border-line bg-ink">
+    <footer className="relative mt-32 border-t border-line bg-ink/60 backdrop-blur-sm">
       <div className="max-w-shell mx-auto px-4 sm:px-6 lg:px-10">
         {/* Oversized sign-off */}
         <div className="py-14 sm:py-20 border-b border-line grid grid-cols-12 gap-6 items-end">

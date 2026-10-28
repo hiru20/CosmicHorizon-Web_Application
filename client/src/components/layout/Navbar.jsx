@@ -63,7 +63,7 @@ const Navbar = () => {
 
   return (
     <>
-      <header className="sticky top-0 z-40 w-full bg-black/90 backdrop-blur-sm border-b border-line">
+      <header className="sticky top-0 z-40 w-full bg-ink/90 backdrop-blur-sm border-b border-line">
         <nav className="max-w-shell mx-auto h-14 px-4 sm:px-6 lg:px-10 flex items-center gap-6" aria-label="Main navigation">
           {/* Wordmark */}
           <Link to="/" className="flex items-baseline gap-2 flex-shrink-0 mr-auto lg:mr-0" aria-label="CosmicHorizon home">
@@ -116,7 +116,7 @@ const Navbar = () => {
                 </button>
 
                 {userMenuOpen && (
-                  <div role="menu" className="absolute right-0 mt-4 w-60 bg-ink-900 border border-line-strong animate-zoom-in">
+                  <div role="menu" className="absolute right-0 mt-4 w-60 surface border border-line-strong animate-zoom-in">
                     <div className="px-4 py-3 border-b border-line">
                       <p className="text-sm text-fg truncate">{user?.name}</p>
                       <p className="font-mono text-[0.625rem] text-fg-muted truncate mt-0.5">{user?.email}</p>
@@ -146,7 +146,7 @@ const Navbar = () => {
                 <Link to="/login" className="link-sweep text-fg-muted hover:text-fg">
                   Login
                 </Link>
-                <Link to="/register" className="h-8 px-3 flex items-center bg-signal text-black hover:bg-signal-hover transition-colors">
+                <Link to="/register" className="h-9 px-4 flex items-center btn-gradient rounded-btn font-sans font-semibold normal-case tracking-normal text-[0.8125rem]">
                   Register
                 </Link>
               </div>
@@ -173,7 +173,7 @@ const Navbar = () => {
 
       {/* Mobile menu: full-screen typographic overlay */}
       {mobileMenuOpen && (
-        <div id="mobile-menu" className="lg:hidden fixed inset-0 top-14 z-40 bg-black animate-fade-in flex flex-col overflow-y-auto">
+        <div id="mobile-menu" className="lg:hidden fixed inset-0 top-14 z-40 bg-ink animate-fade-in flex flex-col overflow-y-auto">
           <ul className="border-t border-line">
             {[{ index: '00', label: 'Index', to: '/', match: (p) => p === '/' }, ...NAV_ITEMS, ...(isAuthenticated ? [{ index: '05', label: 'Mission Log', to: '/dashboard', match: (p) => p === '/dashboard' }] : [])].map(
               (item, i) => {
@@ -217,7 +217,7 @@ const Navbar = () => {
                 <Link to="/login" onClick={() => setMobileMenuOpen(false)} className="h-12 flex items-center justify-center border border-line-strong text-fg">
                   Login
                 </Link>
-                <Link to="/register" onClick={() => setMobileMenuOpen(false)} className="h-12 flex items-center justify-center bg-signal text-black">
+                <Link to="/register" onClick={() => setMobileMenuOpen(false)} className="h-12 flex items-center justify-center btn-gradient rounded-btn font-sans font-semibold normal-case tracking-normal text-sm">
                   Register
                 </Link>
               </div>

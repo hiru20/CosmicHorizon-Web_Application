@@ -2,7 +2,7 @@ import React from 'react';
 
 const formatDate = (d) => (d ? new Date(d).toLocaleDateString(undefined, { year: 'numeric', month: 'short', day: '2-digit' }) : '—');
 
-const ACTION = 'h-8 px-2.5 flex items-center bg-black/85 border border-line-strong font-mono text-[0.625rem] uppercase tracking-label transition-colors';
+const ACTION = 'h-8 px-2.5 flex items-center bg-ink/85 border border-line-strong font-mono text-[0.625rem] uppercase tracking-label transition-colors';
 
 /**
  * Space Journal (favorite) tile. `featured` makes it the large lead image of the grid.
@@ -11,7 +11,7 @@ const ACTION = 'h-8 px-2.5 flex items-center bg-black/85 border border-line-stro
  */
 const JournalCard = ({ fav, onView, onEdit, onDelete, featured = false }) => (
   <article
-    className={`group relative flex flex-col border border-line bg-ink-900 hover:border-line-bright focus-within:border-line-bright transition-colors duration-300 ${
+    className={`group relative flex flex-col border border-line surface hover:border-line-bright focus-within:border-line-bright transition-colors duration-300 ${
       featured ? 'sm:col-span-2 lg:row-span-2' : ''
     }`}
   >
@@ -19,7 +19,7 @@ const JournalCard = ({ fav, onView, onEdit, onDelete, featured = false }) => (
     <button
       type="button"
       onClick={() => onView(fav)}
-      className={`relative w-full overflow-hidden bg-black block text-left ${featured ? 'aspect-[16/10] lg:flex-1 lg:aspect-auto lg:min-h-[22rem]' : 'aspect-[4/3]'}`}
+      className={`relative w-full overflow-hidden bg-ink block text-left ${featured ? 'aspect-[16/10] lg:flex-1 lg:aspect-auto lg:min-h-[22rem]' : 'aspect-[4/3]'}`}
       aria-label={`View details for ${fav.title}`}
     >
       {fav.imageUrl ? (

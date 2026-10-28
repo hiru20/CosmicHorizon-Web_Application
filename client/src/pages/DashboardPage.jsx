@@ -708,7 +708,7 @@ const DashboardPage = () => {
                 <div className="grid grid-cols-1 lg:grid-cols-3 border border-line divide-y lg:divide-y-0 lg:divide-x divide-line">
                   {boardColumns.map((col) => (
                     <div key={col.key} className="min-w-0">
-                      <div className="flex items-center justify-between px-4 sm:px-5 h-11 border-b border-line bg-ink-900">
+                      <div className="flex items-center justify-between px-4 sm:px-5 h-11 border-b border-line surface">
                         <h3 className="flex items-baseline gap-2.5 label text-fg">
                           <span className={col.key === 'high' ? 'text-signal' : 'text-fg-faint'}>{col.code}</span>
                           {col.label}
@@ -877,7 +877,7 @@ const DashboardPage = () => {
         {viewFavItem && (
           <div className="space-y-6">
             {viewFavItem.imageUrl && (
-              <div className="max-h-80 w-full overflow-hidden bg-black border border-line flex items-center justify-center">
+              <div className="max-h-80 w-full overflow-hidden bg-ink border border-line flex items-center justify-center">
                 <img
                   src={viewFavItem.imageUrl}
                   alt={viewFavItem.title}

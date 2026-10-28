@@ -4,12 +4,12 @@ import React from 'react';
  * Flat surface block with hairline border.
  * - `index` + `title`: renders a mono header strip ("04 — TELEMETRY")
  * - `crosshairs`: corner registration marks
- * - `tone`: 'base' (#0A0A0A) | 'raised' (#111) | 'clear' (transparent)
+ * - `tone`: 'base' (blue gradient surface) | 'raised' (lighter blue surface) | 'clear' (transparent)
  * - `interactive`: border brightens + subtle lift on hover
  */
 const TONES = {
-  base: 'bg-ink-900',
-  raised: 'bg-ink-800',
+  base: 'surface',
+  raised: 'surface-raised',
   clear: 'bg-transparent',
 };
 
@@ -30,7 +30,7 @@ const Panel = ({
   const hasHeader = index || title || meta;
   return (
     <Component
-      className={`border border-line ${TONES[tone] || TONES.base} ${crosshairs ? 'crosshairs' : ''} ${
+      className={`rounded-xl border border-line ${TONES[tone] || TONES.base} ${crosshairs ? 'crosshairs' : ''} ${
         interactive ? 'transition-[border-color,transform] duration-300 ease-out hover:border-line-bright hover:-translate-y-0.5' : ''
       } ${className}`}
       {...props}

@@ -148,7 +148,7 @@ const NeoRadar = () => {
         aria-pressed={isSelected}
         aria-label={`${isSelected ? 'Deselect' : 'Select'} ${ast.name} for comparison`}
         className={`inline-flex items-center gap-1.5 h-7 px-2.5 border font-mono text-[0.625rem] uppercase tracking-label transition-colors ${
-          isSelected ? 'bg-signal border-signal text-black' : 'border-line-strong text-fg-muted hover:text-fg hover:border-fg-muted'
+          isSelected ? 'btn-gradient rounded-btn' : 'border-line-strong text-fg-muted hover:text-fg hover:border-fg-muted'
         }`}
       >
         {isSelected ? <Check className="w-3 h-3" strokeWidth={1.5} /> : <GitCompare className="w-3 h-3" strokeWidth={1.5} />}
@@ -415,7 +415,7 @@ const NeoRadar = () => {
                   { ast: a1, m: m1 },
                   { ast: a2, m: m2 },
                 ].map(({ ast, m }) => (
-                  <div key={ast.id} className="bg-ink-900 p-4 space-y-2">
+                  <div key={ast.id} className="surface p-4 space-y-2">
                     <div className="font-mono text-base text-fg break-words">{ast.name}</div>
                     <div className="font-mono text-[0.625rem] text-fg-faint">NEO ID {ast.id}</div>
                     <Badge variant={m.isHazard ? 'danger' : 'neutral'}>{m.isHazard ? 'Hazardous' : 'Nominal'}</Badge>

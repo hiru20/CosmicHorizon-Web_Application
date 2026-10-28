@@ -2,13 +2,13 @@ import React from 'react';
 import { Link } from 'react-router-dom';
 
 const VARIANTS = {
-  // Filled signal orange: the one primary action on a screen
-  primary: 'bg-signal text-black border border-signal hover:bg-signal-hover hover:border-signal-hover',
-  // Hairline outline: default secondary action
-  secondary: 'border border-line-strong text-fg hover:border-fg-muted hover:bg-white/[0.03]',
-  ghost: 'border border-transparent text-fg-muted hover:text-fg',
+  // Filled amber-to-orange gradient: the main action on a screen
+  primary: 'btn-gradient border',
+  // Light warm gradient tint with an amber edge: secondary actions
+  secondary: 'btn-gradient-soft border',
+  ghost: 'border border-transparent text-fg-muted hover:text-fg hover:bg-white/[0.04]',
   danger: 'border border-danger/50 text-danger hover:border-danger hover:bg-danger/10',
-  'danger-solid': 'bg-danger text-black border border-danger hover:bg-[#ee6366]',
+  'danger-solid': 'btn-gradient-danger border',
   // Text link with a sweeping underline
   link: 'link-sweep text-fg hover:text-signal px-0 py-0 border-0',
 };
@@ -19,10 +19,10 @@ VARIANTS.amber = VARIANTS.primary;
 VARIANTS['amber-soft'] = VARIANTS.secondary;
 
 const SIZES = {
-  xs: 'h-7 px-2.5 text-[0.6875rem] gap-1.5',
-  sm: 'h-9 px-3.5 text-xs gap-2',
-  md: 'h-11 px-5 text-xs gap-2',
-  lg: 'h-14 px-7 text-sm gap-3',
+  xs: 'h-7 px-2.5 text-xs gap-1.5',
+  sm: 'h-9 px-4 text-[0.8125rem] gap-2',
+  md: 'h-11 px-5 text-sm gap-2',
+  lg: 'h-14 px-7 text-[0.9375rem] gap-3',
   icon: 'h-9 w-9 justify-center',
 };
 
@@ -53,13 +53,13 @@ const Button = ({
   ...props
 }) => {
   const isLink = variant === 'link';
-  const classes = `inline-flex items-center font-mono uppercase tracking-label font-medium transition-[color,background-color,border-color,transform] duration-200 ease-out disabled:opacity-40 disabled:pointer-events-none active:translate-y-px ${
-    VARIANTS[variant] || VARIANTS.primary
-  } ${isLink ? 'text-xs' : SIZES[size] || SIZES.md} ${className}`;
+  const classes = `inline-flex items-center transition-[color,background-color,border-color,transform] duration-200 ease-out disabled:opacity-40 disabled:pointer-events-none active:translate-y-px ${
+    isLink ? 'font-mono uppercase tracking-label font-medium' : 'font-sans font-semibold rounded-btn'
+  } ${VARIANTS[variant] || VARIANTS.primary} ${isLink ? 'text-xs' : SIZES[size] || SIZES.md} ${className}`;
 
   const content = (
     <>
-      {loading ? <Spinner /> : Icon && <Icon className="w-3.5 h-3.5 flex-shrink-0" strokeWidth={1.5} aria-hidden="true" />}
+      {loading ? <Spinner /> : Icon && <Icon className="w-4 h-4 flex-shrink-0" strokeWidth={2} aria-hidden="true" />}
       {children}
       {IconRight && !loading && (
         <IconRight className="w-3.5 h-3.5 flex-shrink-0 transition-transform duration-300 group-hover:translate-x-0.5" strokeWidth={1.5} aria-hidden="true" />

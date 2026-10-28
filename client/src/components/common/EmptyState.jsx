@@ -13,7 +13,7 @@ const OrbitSketch = () => (
 
 /** Typographic empty state: index code, serif line, quiet illustration and an optional action. */
 const EmptyState = ({ code = 'NO SIGNAL', title, description, action, className = '' }) => (
-  <div className={`border border-line bg-ink-900 px-6 py-14 sm:py-16 grid sm:grid-cols-[auto_1fr] gap-8 items-center ${className}`}>
+  <div className={`rounded-xl border border-line surface px-6 py-14 sm:py-16 grid sm:grid-cols-[auto_1fr] gap-8 items-center ${className}`}>
     <div className="mx-auto sm:mx-0">
       <OrbitSketch />
     </div>

@@ -29,7 +29,7 @@ const CoordinatesDisplay = ({ telemetry, isPolling, onTogglePolling, onRefresh, 
   const velocity = telemetry.velocity ? telemetry.velocity : null;
 
   return (
-    <section aria-label="ISS telemetry" className="border border-line bg-ink-900 crosshairs">
+    <section aria-label="ISS telemetry" className="border border-line surface crosshairs">
       <div className="flex items-center justify-between gap-4 px-5 h-10 border-b border-line">
         <span className="label text-fg-muted">T — State vector</span>
         <LiveDot label={isPolling ? 'Polling 3.5 s' : 'Paused'} active={isPolling} />

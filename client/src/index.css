@@ -8,19 +8,51 @@
     -webkit-text-size-adjust: 100%;
   }
 
+  /*
+   * Deep-space backdrop: black-blue base, layered blue light.
+   *  - royal-blue nebula top-left, pale sky-blue haze top-right
+   *  - cobalt glow drifting in from the left edge
+   *  - a wide blue "atmosphere" horizon rising from the bottom
+   *  - one faint diagonal sheen for depth
+   */
   body {
     @apply bg-ink text-fg font-sans min-h-screen antialiased;
     font-feature-settings: 'ss01', 'cv11';
+    background-color: #040915;
+    background-image:
+      radial-gradient(ellipse 60% 50% at 8% -8%, rgba(29, 78, 216, 0.38), transparent 70%),
+      radial-gradient(ellipse 42% 38% at 92% 6%, rgba(56, 189, 248, 0.16), transparent 70%),
+      radial-gradient(ellipse 45% 50% at -8% 58%, rgba(30, 64, 175, 0.26), transparent 70%),
+      radial-gradient(ellipse 40% 35% at 104% 62%, rgba(59, 130, 246, 0.12), transparent 70%),
+      radial-gradient(ellipse 95% 45% at 50% 118%, rgba(37, 99, 235, 0.34), transparent 72%),
+      linear-gradient(115deg, transparent 38%, rgba(147, 197, 253, 0.035) 50%, transparent 62%),
+      linear-gradient(180deg, #071029 0%, #040915 42%, #02050d 100%);
+    background-attachment: fixed;
+  }
+
+  /* Faint blue survey grid, fading out toward the edges */
+  body::before {
+    content: '';
+    position: fixed;
+    inset: 0;
+    z-index: -20;
+    pointer-events: none;
+    background-image:
+      linear-gradient(to right, rgba(96, 165, 250, 0.05) 1px, transparent 1px),
+      linear-gradient(to bottom, rgba(96, 165, 250, 0.05) 1px, transparent 1px);
+    background-size: 72px 72px;
+    mask-image: radial-gradient(ellipse 75% 65% at 50% 35%, black 20%, transparent 80%);
+    -webkit-mask-image: radial-gradient(ellipse 75% 65% at 50% 35%, black 20%, transparent 80%);
   }
 
   ::selection {
-    background: #ff5a1f;
-    color: #000;
+    background: #3b82f6;
+    color: #ffffff;
   }
 
   /* Accent focus ring everywhere */
   :focus-visible {
-    outline: 1px solid #ff5a1f;
+    outline: 2px solid #ffa066;
     outline-offset: 3px;
   }
 
@@ -34,8 +66,8 @@
   }
 
   select option {
-    background: #0a0a0a;
-    color: #ededed;
+    background: #0a1428;
+    color: #eef4ff;
   }
 }
 
@@ -49,14 +81,69 @@
     @apply font-mono tabular-nums;
   }
 
-  /* Flat surface panel. Hairline border, no blur, no glow. */
+  /* Blue surface: a light top-to-bottom blue gradient, slightly translucent so the
+     backdrop's blue light reads through, with a thin highlight on the top edge */
+  .surface {
+    background-image: linear-gradient(180deg, rgba(17, 33, 66, 0.82) 0%, rgba(9, 18, 38, 0.82) 100%);
+    backdrop-filter: blur(6px);
+    -webkit-backdrop-filter: blur(6px);
+    box-shadow: inset 0 1px 0 rgba(147, 197, 253, 0.07);
+  }
+  .surface-raised {
+    background-image: linear-gradient(180deg, rgba(24, 45, 88, 0.85) 0%, rgba(14, 28, 58, 0.85) 100%);
+    backdrop-filter: blur(6px);
+    -webkit-backdrop-filter: blur(6px);
+    box-shadow: inset 0 1px 0 rgba(147, 197, 253, 0.1);
+  }
+
   .panel {
-    @apply bg-ink-900 border border-line;
+    @apply surface border border-line;
+  }
+
+  /* Filled gradient button: light amber into warm orange */
+  .btn-gradient {
+    background-image: linear-gradient(120deg, #ffc062 0%, #ffa066 45%, #ff8a4c 100%);
+    background-size: 160% 100%;
+    background-position: 0% 50%;
+    color: #1c1206;
+    border-color: transparent;
+    box-shadow: 0 6px 18px -8px rgba(255, 138, 76, 0.55), inset 0 1px 0 rgba(255, 255, 255, 0.35);
+    transition: background-position 0.4s ease, box-shadow 0.3s ease, transform 0.2s ease;
+  }
+  .btn-gradient:hover {
+    background-position: 100% 50%;
+    box-shadow: 0 10px 24px -8px rgba(255, 138, 76, 0.7), inset 0 1px 0 rgba(255, 255, 255, 0.4);
+    transform: translateY(-1px);
+  }
+
+  /* Soft gradient for secondary buttons: a light warm tint with an amber edge */
+  .btn-gradient-soft {
+    background-image: linear-gradient(120deg, rgba(255, 192, 98, 0.16), rgba(255, 138, 76, 0.08));
+    border-color: rgba(255, 160, 102, 0.35);
+    color: #fde7d4;
+    transition: background-color 0.3s ease, border-color 0.3s ease, transform 0.2s ease;
+  }
+  .btn-gradient-soft:hover {
+    background-image: linear-gradient(120deg, rgba(255, 192, 98, 0.26), rgba(255, 138, 76, 0.16));
+    border-color: rgba(255, 160, 102, 0.6);
+    transform: translateY(-1px);
+  }
+
+  /* Danger gradient: light coral into red */
+  .btn-gradient-danger {
+    background-image: linear-gradient(120deg, #ff9a9e 0%, #f0626a 100%);
+    color: #2a0a0c;
+    border-color: transparent;
+    box-shadow: 0 6px 18px -8px rgba(240, 98, 106, 0.6);
+  }
+  .btn-gradient-danger:hover {
+    filter: brightness(1.06);
+    transform: translateY(-1px);
   }
 
   /* Kept by name for any markup still using it; now a flat surface */
   .glass-panel {
-    @apply bg-ink-900 border border-line;
+    @apply surface border border-line;
   }
   .glass-panel-hover {
     @apply transition-colors duration-300;
@@ -77,8 +164,8 @@
     height: 9px;
     pointer-events: none;
     background:
-      linear-gradient(#5c5c5c, #5c5c5c) center / 1px 100% no-repeat,
-      linear-gradient(#5c5c5c, #5c5c5c) center / 100% 1px no-repeat;
+      linear-gradient(#3d5c99, #3d5c99) center / 1px 100% no-repeat,
+      linear-gradient(#3d5c99, #3d5c99) center / 100% 1px no-repeat;
   }
   .crosshairs::before {
     top: -5px;
@@ -186,25 +273,26 @@
 /* Scrollbar */
 * {
   scrollbar-width: thin;
-  scrollbar-color: #2a2a2a #000;
+  scrollbar-color: #21396a #050a16;
 }
 ::-webkit-scrollbar {
   width: 8px;
   height: 8px;
 }
 ::-webkit-scrollbar-track {
-  background: #000;
+  background: #050a16;
 }
 ::-webkit-scrollbar-thumb {
-  background: #2a2a2a;
+  background: #21396a;
+  border-radius: 4px;
 }
 ::-webkit-scrollbar-thumb:hover {
-  background: #ff5a1f;
+  background: #ff8a4c;
 }
 
-/* Leaflet: flat black chrome, monochrome tiles */
+/* Leaflet: navy chrome */
 .leaflet-container {
-  background: #000;
+  background: #050a16;
   font-family: Inter, system-ui, sans-serif;
 }
 .map-mono .leaflet-tile-pane {
@@ -215,8 +303,8 @@
 }
 .leaflet-popup-content-wrapper,
 .leaflet-popup-tip {
-  background: #0a0a0a !important;
-  border: 1px solid #2a2a2a;
+  background: #0a1428 !important;
+  border: 1px solid #21396a;
   box-shadow: none !important;
 }
 .leaflet-popup-content-wrapper {
@@ -225,25 +313,25 @@
 /* Existing popup markup uses inline dark text colours; lift them for the dark popup */
 .leaflet-popup-content,
 .leaflet-popup-content div {
-  color: #ededed !important;
+  color: #eef4ff !important;
   font-family: 'JetBrains Mono', ui-monospace, monospace;
   font-size: 11px !important;
 }
 .leaflet-popup-content strong {
-  color: #ff5a1f !important;
+  color: #ffa066 !important;
   font-weight: 500;
 }
 .leaflet-popup-close-button {
-  color: #8a8a8a !important;
+  color: #9fb3d6 !important;
 }
 .leaflet-control-attribution {
-  background: rgba(0, 0, 0, 0.75) !important;
-  color: #555 !important;
+  background: rgba(5, 10, 22, 0.8) !important;
+  color: #5c7299 !important;
   font-family: 'JetBrains Mono', ui-monospace, monospace;
   font-size: 9px !important;
 }
 .leaflet-control-attribution a {
-  color: #8a8a8a !important;
+  color: #9fb3d6 !important;
 }
 
 @media (prefers-reduced-motion: reduce) {

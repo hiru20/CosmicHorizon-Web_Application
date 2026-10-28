@@ -28,7 +28,7 @@ const Tag = ({ variant = 'neutral', children, className = '', dot = false }) => 
   const key = VARIANTS[variant] ? variant : ALIASES[variant] || 'neutral';
   return (
     <span
-      className={`inline-flex items-center gap-1.5 h-[22px] px-2 border bg-black/60 font-mono text-[0.625rem] font-medium uppercase tracking-label leading-none whitespace-nowrap ${VARIANTS[key]} ${className}`}
+      className={`inline-flex items-center gap-1.5 h-[22px] px-2 border bg-ink/60 font-mono text-[0.625rem] font-medium uppercase tracking-label leading-none whitespace-nowrap ${VARIANTS[key]} ${className}`}
     >
       {dot && <span className="w-1 h-1 bg-current" aria-hidden="true" />}
       {children}
