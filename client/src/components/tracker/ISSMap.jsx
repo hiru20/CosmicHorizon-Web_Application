@@ -6,11 +6,6 @@ import Button from '../common/Button';
 import { computeTerminator } from './terminator';
 
 const TILE_LAYERS = {
-  dark: {
-    name: 'Dark',
-    url: 'https://{s}.basemaps.cartocdn.com/dark_nolabels/{z}/{x}/{y}{r}.png',
-    attribution: '&copy; OpenStreetMap contributors &copy; CARTO',
-  },
   satellite: {
     name: 'Satellite Earth',
     url: 'https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}',
@@ -28,13 +23,6 @@ const TILE_LAYERS = {
   },
 };
 
-// Monochrome treatment per tile source (applied to a wrapper, never to the Leaflet container itself)
-const TILE_FILTER_CLASS = {
-  dark: '',
-  satellite: 'map-mono',
-  topo: 'map-mono',
-  osmStandard: 'map-mono-invert',
-};
 
 const SIGNAL = '#FF5A1F';
 
@@ -79,7 +67,7 @@ const ISSMap = ({ telemetry, trajectory = [] }) => {
   const trailFadeRef = useRef(null);
   const terminatorRef = useRef(null);
 
-  const [selectedTile, setSelectedTile] = useState('dark');
+  const [selectedTile, setSelectedTile] = useState('satellite');
   const [autoCenter, setAutoCenter] = useState(true);
 
   // "Guess the ISS Location" Mini-Game State
@@ -370,7 +358,7 @@ const ISSMap = ({ telemetry, trajectory = [] }) => {
   return (
     <div className="space-y-px">
       {/* Map Container */}
-      <div className={`relative w-full h-[420px] sm:h-[560px] border border-line overflow-hidden ${TILE_FILTER_CLASS[selectedTile] || ''}`}>
+      <div className={`relative w-full h-[420px] sm:h-[560px] border border-line overflow-hidden`}>
         <div ref={mapContainerRef} className="w-full h-full bg-ink cursor-crosshair" />
 
         {/* Crosshair + coordinate grid overlay (hidden mid-guess so it can't give the answer away) */}
