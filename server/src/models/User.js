@@ -15,10 +15,8 @@ const userSchema = new mongoose.Schema(
       unique: true,
       lowercase: true,
       trim: true,
-      match: [
-        /^\w+([.-]?\w+)*@\w+([.-]?\w+)*(\.\w{2,})+$/,
-        'Please provide a valid email address',
-      ],
+      // Same rule as the client form, so addresses like name+tag@gmail.com are accepted
+      match: [/^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/, 'Please provide a valid email address'],
     },
     password: {
       type: String,
@@ -51,6 +49,12 @@ const userSchema = new mongoose.Schema(
     },
     verificationExpires: {
       type: Date,
+      select: false,
+    },
+    // Wrong 6-digit codes entered since the last code was issued (brute-force guard)
+    verificationAttempts: {
+      type: Number,
+      default: 0,
       select: false,
     },
   },
