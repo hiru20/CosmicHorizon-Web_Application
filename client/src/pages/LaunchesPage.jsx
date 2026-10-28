@@ -4,11 +4,17 @@ import { userService } from '../services/userService';
 import { useAuth } from '../context/AuthContext';
 import { useNotification } from '../context/NotificationContext';
 import LaunchFilter from '../components/launches/LaunchFilter';
-import LaunchCard from '../components/launches/LaunchCard';
-import Loader from '../components/common/Loader';
+import LaunchCard, { LaunchStatusTag, MANIFEST_COLUMNS } from '../components/launches/LaunchCard';
+import CountdownTimer from '../components/launches/CountdownTimer';
+import WatchToggle from '../components/launches/WatchToggle';
 import Modal from '../components/common/Modal';
 import Badge from '../components/common/Badge';
-import { Rocket, Bookmark, Radio, Bell, BellRing, Clock, CheckCircle2 } from 'lucide-react';
+import Button from '../components/common/Button';
+import SectionHeader from '../components/common/SectionHeader';
+import LiveDot from '../components/common/LiveDot';
+import EmptyState from '../components/common/EmptyState';
+import { SkeletonRows } from '../components/common/Skeleton';
+import { Bell, BellRing } from 'lucide-react';
 
 const REMINDER_OPTIONS = [
   { key: '15m', label: '15 Minutes Before Liftoff', desc: 'Final terminal count alert' },
@@ -41,6 +47,9 @@ const LaunchesPage = () => {
   const [reminderModalLaunch, setReminderModalLaunch] = useState(null);
   const [selectedReminderTime, setSelectedReminderTime] = useState('1h');
   const [savingReminder, setSavingReminder] = useState(false);
+
+  // UI only: which manifest row is expanded
+  const [expandedId, setExpandedId] = useState(null);
 
   // Fetch launches
   const fetchLaunches = useCallback(async () => {
@@ -206,156 +215,236 @@ const LaunchesPage = () => {
     }
   };
 
+  // Presentation only: the next launch with a future NET is featured large
+  const featuredLaunch = launches.find((l) => l.net && new Date(l.net).getTime() > Date.now()) || null;
+  const activeReminderCount = Object.keys(reminders).length;
+
   return (
-    <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 space-y-8">
+    <div className="max-w-shell mx-auto px-4 sm:px-6 lg:px-10 pt-12 sm:pt-16 pb-8 space-y-16 sm:space-y-20">
       {/* Page Header */}
-      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 border-b border-slate-800 pb-6">
-        <div>
-          <div className="flex items-center gap-2.5">
-            <span className="p-2 rounded-lg bg-indigo-500/10 border border-indigo-500/30 text-indigo-400">
-              <Rocket className="w-5 h-5" />
-            </span>
-            <h1 className="text-2xl sm:text-3xl font-extrabold text-white tracking-tight">
-              Upcoming Rocket Launches
-            </h1>
-          </div>
-          <p className="text-sm text-slate-400 mt-1.5">
-            Global orbital manifest, countdown schedules, and custom launch reminders
-          </p>
-        </div>
-
-        <div className="flex flex-wrap items-center gap-2">
-          {Object.keys(reminders).length > 0 && (
-            <div className="text-xs font-mono text-amber-300 bg-amber-950/30 px-3.5 py-2 rounded-xl border border-amber-500/30 flex items-center gap-1.5">
-              <BellRing className="w-3.5 h-3.5 text-amber-400" />
-              <span>{Object.keys(reminders).length} Active Reminder(s)</span>
-            </div>
-          )}
-          <div className="text-xs font-mono text-slate-400 bg-slate-900/60 px-3.5 py-2 rounded-xl border border-slate-800 flex items-center gap-2">
-            <span className="w-2 h-2 rounded-full bg-cyan-400 animate-ping"></span>
-            <span>Manifest Active: {launches.length} Missions</span>
-          </div>
-        </div>
-      </div>
-
-      {/* Filter Toolbar */}
-      <LaunchFilter
-        search={search}
-        setSearch={setSearch}
-        agency={agency}
-        setAgency={setAgency}
-        status={status}
-        setStatus={setStatus}
+      <SectionHeader
+        index="03"
+        eyebrow="Launch manifest"
+        title={
+          <>
+            Upcoming <span className="italic text-fg-muted">launches</span>
+          </>
+        }
+        description="Global orbital manifest, countdown schedules, and custom launch reminders."
+        actions={
+          <>
+            <LiveDot label={`${launches.length} missions on manifest`} active={!loading} />
+            {activeReminderCount > 0 && (
+              <Badge variant="signal">
+                <BellRing className="w-3 h-3" strokeWidth={1.5} aria-hidden="true" />
+                {activeReminderCount} active reminder{activeReminderCount === 1 ? '' : 's'}
+              </Badge>
+            )}
+          </>
+        }
       />
 
-      {/* Launch Cards Grid */}
-      {loading ? (
-        <div className="glass-panel rounded-2xl p-12 border border-slate-800">
-          <Loader message="Scanning worldwide launch pads and countdown clocks..." />
-        </div>
-      ) : launches.length === 0 ? (
-        <div className="glass-panel rounded-2xl p-12 border border-slate-800 text-center space-y-3">
-          <Rocket className="w-10 h-10 text-slate-600 mx-auto" />
-          <h3 className="text-lg font-bold text-slate-200">No matching launches found</h3>
-          <p className="text-sm text-slate-400 max-w-md mx-auto">
-            Try adjusting your search keywords, agency filter, or status criteria.
-          </p>
-        </div>
-      ) : (
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-          {launches.map((launch) => (
-            <LaunchCard
-              key={launch.id}
-              launch={launch}
-              isInWatchlist={watchlistIds.has(String(launch.id))}
-              reminderTime={reminders[String(launch.id)]}
-              onToggleWatchlist={handleToggleWatchlist}
-              onOpenReminder={handleOpenReminder}
-              onSelectDetails={(l) => setSelectedLaunch(l)}
-            />
-          ))}
-        </div>
+      {/* Next liftoff */}
+      {featuredLaunch && !loading && (
+        <section aria-labelledby="next-liftoff-title" className="border-y border-line">
+          <div className="grid grid-cols-12">
+            <div className="col-span-12 lg:col-span-8 py-8 lg:py-10 lg:pr-10 space-y-8">
+              <div className="flex items-center gap-3">
+                <span className="font-mono text-[0.6875rem] text-signal">03.1</span>
+                <span className="label">Next liftoff</span>
+              </div>
+              <h2 id="next-liftoff-title" className="font-display text-display-md text-fg max-w-3xl">
+                {featuredLaunch.name}
+              </h2>
+              <CountdownTimer targetDate={featuredLaunch.net} variant="large" />
+            </div>
+
+            <div className="col-span-12 lg:col-span-4 border-t lg:border-t-0 lg:border-l border-line py-8 lg:py-10 lg:pl-10 flex flex-col gap-8">
+              <dl className="grid grid-cols-[5.5rem_1fr] gap-y-3 font-mono text-[0.6875rem]">
+                <dt className="text-fg-faint uppercase tracking-label">Provider</dt>
+                <dd className="text-fg">{featuredLaunch.launch_service_provider?.name || 'Space Provider'}</dd>
+                <dt className="text-fg-faint uppercase tracking-label">Vehicle</dt>
+                <dd className="text-fg">{featuredLaunch.rocket?.configuration?.full_name || 'Rocket Launcher'}</dd>
+                <dt className="text-fg-faint uppercase tracking-label">Pad</dt>
+                <dd className="text-fg">{featuredLaunch.pad?.location?.name || 'Spaceport Pad'}</dd>
+                <dt className="text-fg-faint uppercase tracking-label">NET</dt>
+                <dd className="text-fg">{new Date(featuredLaunch.net).toUTCString().replace('GMT', 'UTC')}</dd>
+                <dt className="text-fg-faint uppercase tracking-label">Status</dt>
+                <dd>
+                  <LaunchStatusTag status={featuredLaunch.status?.name} />
+                </dd>
+              </dl>
+              <div className="flex flex-wrap gap-2 mt-auto">
+                <WatchToggle
+                  size="md"
+                  pressed={watchlistIds.has(String(featuredLaunch.id))}
+                  onClick={() => handleToggleWatchlist(featuredLaunch)}
+                />
+                <Button
+                  variant="secondary"
+                  icon={reminders[String(featuredLaunch.id)] ? BellRing : Bell}
+                  onClick={() => handleOpenReminder(featuredLaunch)}
+                >
+                  {reminders[String(featuredLaunch.id)] ? 'Reminder on' : 'Remind me'}
+                </Button>
+                <Button variant="link" onClick={() => setSelectedLaunch(featuredLaunch)} className="ml-2">
+                  Full brief
+                </Button>
+              </div>
+            </div>
+          </div>
+        </section>
       )}
+
+      {/* Filter Toolbar */}
+      <section aria-label="Filters" className="space-y-6">
+        <div className="flex items-center gap-3">
+          <span className="font-mono text-[0.6875rem] text-signal">03.2</span>
+          <span className="label">Filter manifest</span>
+        </div>
+        <LaunchFilter
+          search={search}
+          setSearch={setSearch}
+          agency={agency}
+          setAgency={setAgency}
+          status={status}
+          setStatus={setStatus}
+        />
+      </section>
+
+      {/* Manifest */}
+      <section aria-labelledby="manifest-title" className="space-y-6">
+        <div className="flex items-center gap-3">
+          <span className="font-mono text-[0.6875rem] text-signal">03.3</span>
+          <h2 id="manifest-title" className="label">
+            Manifest
+          </h2>
+          <span className="flex-1 h-px bg-line" aria-hidden="true" />
+          {!loading && <span className="label text-fg-faint tabular-nums">{String(launches.length).padStart(2, '0')} entries</span>}
+        </div>
+
+        {loading ? (
+          <SkeletonRows rows={6} cols={5} />
+        ) : launches.length === 0 ? (
+          <EmptyState
+            code="NO MATCHING ENTRIES"
+            title="Nothing on the manifest for this query."
+            description="Try adjusting your search keywords, agency filter, or status criteria."
+          />
+        ) : (
+          <div className="border-t border-line">
+            {/* Column header (md+) */}
+            <div
+              className={`hidden md:grid ${MANIFEST_COLUMNS} gap-x-6 px-5 h-10 items-center border-b border-line label text-fg-faint`}
+              aria-hidden="true"
+            >
+              <span>T-minus</span>
+              <span>Mission</span>
+              <span>Vehicle</span>
+              <span>Provider</span>
+              <span className="hidden xl:block">Pad</span>
+              <span>Status</span>
+              <span className="text-right">Actions</span>
+            </div>
+            <ol aria-label="Launch manifest">
+              {launches.map((launch, i) => (
+                <LaunchCard
+                  key={launch.id}
+                  index={String(i + 1).padStart(2, '0')}
+                  launch={launch}
+                  isInWatchlist={watchlistIds.has(String(launch.id))}
+                  reminderTime={reminders[String(launch.id)]}
+                  onToggleWatchlist={handleToggleWatchlist}
+                  onOpenReminder={handleOpenReminder}
+                  onSelectDetails={(l) => setSelectedLaunch(l)}
+                  expanded={expandedId === launch.id}
+                  onToggleExpand={() => setExpandedId((cur) => (cur === launch.id ? null : launch.id))}
+                />
+              ))}
+            </ol>
+          </div>
+        )}
+      </section>
 
       {/* Set Launch Reminder Modal */}
       <Modal
         isOpen={!!reminderModalLaunch}
         onClose={() => setReminderModalLaunch(null)}
-        title="Set Rocket Launch Reminder"
+        title="Set launch reminder"
         maxWidth="max-w-md"
       >
         {reminderModalLaunch && (
-          <div className="space-y-4">
-            <div className="p-3 rounded-xl bg-slate-900/80 border border-slate-800">
-              <div className="text-xs font-bold text-cyan-400">
-                {reminderModalLaunch.launch_service_provider?.name || 'Space Launch'}
-              </div>
-              <div className="text-sm font-bold text-white mt-0.5">{reminderModalLaunch.name}</div>
-              <div className="text-xs text-slate-400 mt-1 flex items-center gap-1.5">
-                <Clock className="w-3.5 h-3.5 text-emerald-400" />
-                <span>
-                  Scheduled: {new Date(reminderModalLaunch.net).toLocaleString()}
-                </span>
+          <div className="space-y-6">
+            <div className="border-l border-signal pl-4 space-y-1">
+              <div className="label">{reminderModalLaunch.launch_service_provider?.name || 'Space Launch'}</div>
+              <div className="font-display text-2xl leading-tight text-fg">{reminderModalLaunch.name}</div>
+              <div className="font-mono text-[0.6875rem] text-fg-muted">
+                NET {new Date(reminderModalLaunch.net).toLocaleString()}
               </div>
             </div>
 
             <div className="space-y-2">
-              <label className="text-xs font-semibold text-slate-300 block">
+              <span className="label block" id="reminder-options-label">
                 When should we remind you?
-              </label>
-              {REMINDER_OPTIONS.map((opt) => (
-                <button
-                  key={opt.key}
-                  type="button"
-                  onClick={() => setSelectedReminderTime(opt.key)}
-                  className={`w-full p-3 rounded-xl border text-left transition flex items-center justify-between ${
-                    selectedReminderTime === opt.key
-                      ? 'bg-amber-500/15 border-amber-500/50 text-white'
-                      : 'bg-slate-900/70 border-slate-800 text-slate-300 hover:border-slate-700'
-                  }`}
-                >
-                  <div>
-                    <div className="text-xs font-bold">{opt.label}</div>
-                    <div className="text-[11px] text-slate-400">{opt.desc}</div>
-                  </div>
-                  {selectedReminderTime === opt.key && (
-                    <CheckCircle2 className="w-4 h-4 text-amber-400 flex-shrink-0" />
-                  )}
-                </button>
-              ))}
+              </span>
+              <div role="radiogroup" aria-labelledby="reminder-options-label" className="border-t border-line">
+                {REMINDER_OPTIONS.map((opt) => {
+                  const checked = selectedReminderTime === opt.key;
+                  return (
+                    <button
+                      key={opt.key}
+                      type="button"
+                      role="radio"
+                      aria-checked={checked}
+                      onClick={() => setSelectedReminderTime(opt.key)}
+                      className={`w-full flex items-center gap-4 py-3.5 px-1 border-b border-line text-left transition-colors ${
+                        checked ? 'text-fg' : 'text-fg-muted hover:text-fg'
+                      }`}
+                    >
+                      <span
+                        className={`w-3 h-3 border flex items-center justify-center flex-shrink-0 ${checked ? 'border-signal' : 'border-line-bright'}`}
+                        aria-hidden="true"
+                      >
+                        {checked && <span className="w-1.5 h-1.5 bg-signal" />}
+                      </span>
+                      <span className="flex-1">
+                        <span className="block font-mono text-xs uppercase tracking-label">{opt.label}</span>
+                        <span className="block text-xs text-fg-muted mt-0.5">{opt.desc}</span>
+                      </span>
+                      <span className="font-mono text-[0.625rem] text-fg-faint uppercase">{opt.key}</span>
+                    </button>
+                  );
+                })}
+              </div>
             </div>
 
-            <div className="flex items-center justify-between pt-2 border-t border-slate-800">
+            <div className="flex flex-wrap items-center justify-between gap-3 pt-2">
               {reminders[String(reminderModalLaunch.id)] ? (
                 <button
                   type="button"
                   disabled={savingReminder}
                   onClick={() => handleSaveReminder('none')}
-                  className="text-xs text-rose-400 hover:underline"
+                  className="link-sweep font-mono text-[0.6875rem] uppercase tracking-label text-danger disabled:opacity-40"
                 >
-                  Remove Reminder
+                  Remove reminder
                 </button>
               ) : (
-                <span className="text-[11px] text-slate-500">In-app &amp; Watchlist alert</span>
+                <span className="font-mono text-[0.625rem] text-fg-faint uppercase tracking-label">In-app &amp; watchlist alert</span>
               )}
 
               <div className="flex gap-2">
-                <button
-                  type="button"
-                  onClick={() => setReminderModalLaunch(null)}
-                  className="px-3.5 py-2 rounded-xl text-xs font-medium border border-slate-700 text-slate-300 hover:text-white"
-                >
+                <Button variant="secondary" size="sm" onClick={() => setReminderModalLaunch(null)}>
                   Cancel
-                </button>
-                <button
-                  type="button"
-                  disabled={savingReminder}
+                </Button>
+                <Button
+                  variant="primary"
+                  size="sm"
+                  icon={BellRing}
+                  loading={savingReminder}
                   onClick={() => handleSaveReminder(selectedReminderTime)}
-                  className="flex items-center gap-1.5 px-4 py-2 rounded-xl text-xs font-bold bg-amber-500 text-slate-950 hover:bg-amber-400 transition"
                 >
-                  <BellRing className="w-3.5 h-3.5" />
-                  <span>{savingReminder ? 'Saving...' : 'Save Reminder'}</span>
-                </button>
+                  {savingReminder ? 'Saving...' : 'Save Reminder'}
+                </Button>
               </div>
             </div>
           </div>
@@ -370,90 +459,71 @@ const LaunchesPage = () => {
       >
         {selectedLaunch && (
           <div className="space-y-6">
-            <div className="relative h-60 w-full rounded-xl overflow-hidden border border-slate-800">
+            <figure className="group relative border border-line overflow-hidden">
               <img
                 src={selectedLaunch.image || 'https://images.unsplash.com/photo-1517976487502-53b7c2fb2b6a?w=800'}
                 alt={selectedLaunch.name}
-                className="w-full h-full object-cover"
+                className="img-mono w-full h-64 object-cover"
               />
-              <div className="absolute top-3 left-3 flex gap-2">
-                <Badge variant="go">{selectedLaunch.status?.name || 'Scheduled'}</Badge>
+              <figcaption className="absolute top-3 left-3 flex gap-2">
+                <LaunchStatusTag status={selectedLaunch.status?.name || 'Scheduled'} />
                 {selectedLaunch.webcast_live && (
-                  <Badge variant="live" className="flex items-center gap-1">
-                    <Radio className="w-3 h-3 text-cyan-400 animate-pulse" />
+                  <Badge variant="live">
+                    <LiveDot />
                     <span>Live Webcast</span>
                   </Badge>
                 )}
+              </figcaption>
+            </figure>
+
+            <div className="grid grid-cols-12 gap-6">
+              <div className="col-span-12 md:col-span-7 space-y-2">
+                <h4 className="label">Mission overview</h4>
+                <p className="text-sm text-fg-muted leading-relaxed">
+                  {selectedLaunch.mission?.description || 'Classified orbital insertion or payload deployment.'}
+                </p>
               </div>
-            </div>
 
-            <div>
-              <h4 className="text-xs font-semibold uppercase tracking-wider text-cyan-400 mb-1">
-                Mission Overview
-              </h4>
-              <p className="text-sm text-slate-300 leading-relaxed">
-                {selectedLaunch.mission?.description || 'Classified orbital insertion or payload deployment.'}
-              </p>
-            </div>
-
-            <div className="grid grid-cols-2 sm:grid-cols-3 gap-4 pt-4 border-t border-slate-800 text-xs">
-              <div className="glass-panel p-3 rounded-xl border border-slate-800">
-                <span className="text-slate-400 block mb-1">Launch Provider</span>
-                <span className="font-semibold text-slate-100">
+              <dl className="col-span-12 md:col-span-5 border-t md:border-t-0 md:border-l border-line pt-4 md:pt-0 md:pl-6 grid grid-cols-[5.5rem_1fr] gap-y-3 font-mono text-[0.6875rem] content-start">
+                <dt className="text-fg-faint uppercase tracking-label">Provider</dt>
+                <dd className="text-fg">
                   {selectedLaunch.launch_service_provider?.name} ({selectedLaunch.launch_service_provider?.country_code})
-                </span>
-              </div>
-
-              <div className="glass-panel p-3 rounded-xl border border-slate-800">
-                <span className="text-slate-400 block mb-1">Launch Vehicle</span>
-                <span className="font-semibold text-slate-100">
-                  {selectedLaunch.rocket?.configuration?.full_name}
-                </span>
-              </div>
-
-              <div className="glass-panel p-3 rounded-xl border border-slate-800">
-                <span className="text-slate-400 block mb-1">Target Orbit</span>
-                <span className="font-semibold text-slate-100">
-                  {selectedLaunch.mission?.orbit?.name || 'Low Earth Orbit (LEO)'}
-                </span>
-              </div>
-
-              <div className="glass-panel p-3 rounded-xl border border-slate-800 col-span-2 sm:col-span-3">
-                <span className="text-slate-400 block mb-1">Launch Pad Site</span>
-                <span className="font-semibold text-slate-100">
+                </dd>
+                <dt className="text-fg-faint uppercase tracking-label">Vehicle</dt>
+                <dd className="text-fg">{selectedLaunch.rocket?.configuration?.full_name}</dd>
+                <dt className="text-fg-faint uppercase tracking-label">Orbit</dt>
+                <dd className="text-fg">{selectedLaunch.mission?.orbit?.name || 'Low Earth Orbit (LEO)'}</dd>
+                <dt className="text-fg-faint uppercase tracking-label">Pad</dt>
+                <dd className="text-fg">
                   {selectedLaunch.pad?.name} — {selectedLaunch.pad?.location?.name}
-                </span>
-              </div>
+                </dd>
+                <dt className="text-fg-faint uppercase tracking-label">T-minus</dt>
+                <dd>
+                  <CountdownTimer targetDate={selectedLaunch.net} />
+                </dd>
+              </dl>
             </div>
 
-            <div className="pt-4 border-t border-slate-800 flex flex-wrap justify-end gap-3">
-              <button
+            <div className="pt-5 border-t border-line flex flex-wrap justify-end gap-2">
+              <Button
+                variant="secondary"
+                icon={Bell}
                 onClick={() => {
                   const l = selectedLaunch;
                   setSelectedLaunch(null);
                   handleOpenReminder(l);
                 }}
-                className="flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-semibold bg-amber-500/20 text-amber-300 border border-amber-500/30 hover:bg-amber-500/30 transition"
               >
-                <Bell className="w-4 h-4" />
-                <span>Remind Me</span>
-              </button>
+                Remind Me
+              </Button>
 
-              <button
+              <WatchToggle
+                size="md"
+                pressed={watchlistIds.has(String(selectedLaunch.id))}
                 onClick={() => handleToggleWatchlist(selectedLaunch)}
-                className={`flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-semibold transition ${
-                  watchlistIds.has(String(selectedLaunch.id))
-                    ? 'bg-rose-500/20 text-rose-300 border border-rose-500/30'
-                    : 'bg-cyan-500 text-black shadow-glow-cyan hover:bg-cyan-400'
-                }`}
-              >
-                <Bookmark className="w-4 h-4" />
-                <span>
-                  {watchlistIds.has(String(selectedLaunch.id))
-                    ? 'Remove from Watchlist'
-                    : 'Add to My Watchlist'}
-                </span>
-              </button>
+                labelOn="Remove from Watchlist"
+                labelOff="Add to My Watchlist"
+              />
             </div>
           </div>
         )}

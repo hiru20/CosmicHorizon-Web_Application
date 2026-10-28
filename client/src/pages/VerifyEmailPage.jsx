@@ -1,7 +1,11 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { Link, useParams } from 'react-router-dom';
 import { authService } from '../services/authService';
-import { MailCheck, MailX, Loader2 } from 'lucide-react';
+import { ArrowRight } from 'lucide-react';
+import AuthShell, { StepLabel, ErrorBar } from '../components/auth/AuthShell';
+import Loader from '../components/common/Loader';
+import Button from '../components/common/Button';
+import LiveDot from '../components/common/LiveDot';
 
 const VerifyEmailPage = () => {
   const { token } = useParams();
@@ -30,47 +34,62 @@ const VerifyEmailPage = () => {
     verify();
   }, [token]);
 
+  const statement =
+    status === 'success' ? (
+      <>
+        Channel <span className="italic text-fg-muted">open.</span>
+      </>
+    ) : status === 'error' ? (
+      <>
+        Link <span className="italic text-fg-muted">rejected.</span>
+      </>
+    ) : (
+      <>
+        Checking <span className="italic text-fg-muted">clearance.</span>
+      </>
+    );
+
   return (
-    <div className="min-h-[80vh] flex items-center justify-center px-4 py-12">
-      <div className="w-full max-w-md glass-panel p-8 rounded-3xl border border-slate-800 shadow-2xl text-center space-y-4">
-        {status === 'loading' && (
-          <>
-            <Loader2 className="w-12 h-12 text-cyan-400 mx-auto animate-spin" />
-            <h2 className="text-xl font-black text-white">Verifying your email...</h2>
-          </>
-        )}
+    <AuthShell code="AUTH / 03 — Email link" statement={statement}>
+      <div className="w-full max-w-md mx-auto lg:mx-0" aria-live="polite">
+        <StepLabel index="03">Verification status</StepLabel>
+
+        {status === 'loading' && <Loader message="Verifying your email..." />}
 
         {status === 'success' && (
-          <>
-            <MailCheck className="w-12 h-12 text-emerald-400 mx-auto" />
-            <h2 className="text-xl font-black text-white">Email Verified!</h2>
-            <p className="text-xs text-slate-400">{message}</p>
-            <div className="flex flex-col gap-2 pt-2">
-              <a
-                href="/dashboard"
-                className="inline-block px-5 py-2.5 rounded-xl bg-gradient-to-r from-cyan-500 to-indigo-600 text-white font-bold text-sm shadow-glow-cyan"
-              >
-                Open Astronaut Dashboard
-              </a>
-              <Link to="/login" className="text-xs text-slate-400 hover:text-cyan-400">
-                Or go to Sign In page
+          <div className="space-y-8 animate-slide-up">
+            <div className="space-y-4">
+              <LiveDot label="Email verified" />
+              <h2 className="font-display text-display-sm text-fg">Email verified.</h2>
+              <p className="text-sm text-fg-muted leading-relaxed">{message}</p>
+            </div>
+            <div className="border-t border-line pt-6 flex flex-wrap items-center justify-between gap-4">
+              {/* Full page load so the auth context picks up the stored token */}
+              <Button href="/dashboard" size="lg" iconRight={ArrowRight}>
+                Open dashboard
+              </Button>
+              <Link to="/login" className="link-sweep font-mono text-label uppercase text-fg-muted hover:text-fg">
+                Or go to sign in
               </Link>
             </div>
-          </>
+          </div>
         )}
 
         {status === 'error' && (
-          <>
-            <MailX className="w-12 h-12 text-rose-400 mx-auto" />
-            <h2 className="text-xl font-black text-white">Verification Failed</h2>
-            <p className="text-xs text-slate-400">{message}</p>
-            <Link to="/login" className="inline-block mt-2 text-xs text-cyan-400 font-bold hover:underline">
-              Back to Sign In (you can request a new verification email there)
-            </Link>
-          </>
+          <div className="space-y-8 animate-slide-up">
+            <div className="space-y-4">
+              <h2 className="font-display text-display-sm text-fg">Verification failed.</h2>
+              <ErrorBar>{message}</ErrorBar>
+            </div>
+            <div className="border-t border-line pt-6">
+              <Link to="/login" className="link-sweep font-mono text-label uppercase text-fg hover:text-signal">
+                Back to sign in — request a new verification email there
+              </Link>
+            </div>
+          </div>
         )}
       </div>
-    </div>
+    </AuthShell>
   );
 };
 

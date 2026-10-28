@@ -11,11 +11,13 @@
   },
   "dependencies": {
     "axios": "^1.20.0",
+    "framer-motion": "^14.7.1",
     "leaflet": "^1.9.4",
     "lucide-react": "^1.53.0",
     "react": "^19.2.8",
     "react-dom": "^19.2.8",
-    "react-router-dom": "^7.18.4"
+    "react-router-dom": "^7.18.4",
+    "three": "^0.186.1"
   },
   "devDependencies": {
     "@types/react": "^19.2.18",

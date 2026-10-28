@@ -1,15 +1,17 @@
 import React, { useState, useEffect } from 'react';
 import { spaceService } from '../../services/spaceService';
-import { userService } from '../../services/userService';
-import { useAuth } from '../../context/AuthContext';
 import { useNotification } from '../../context/NotificationContext';
-import Loader from '../common/Loader';
-import Modal from '../common/Modal';
-import { Calendar, Heart, Maximize2, Share2, Sparkles, ExternalLink, Shuffle } from 'lucide-react';
+import Input from '../common/Input';
+import Button from '../common/Button';
+import Skeleton from '../common/Skeleton';
+import EmptyState from '../common/EmptyState';
+import ImageViewer from './ImageViewer';
+import LazyImage from './LazyImage';
+import SaveToggle from './SaveToggle';
+import { Maximize2, ExternalLink, Shuffle } from 'lucide-react';
 
 const ApodViewer = ({ isFavorited, onToggleFavorite }) => {
-  const { isAuthenticated } = useAuth();
-  const { notifySuccess, notifyError, notifyInfo } = useNotification();
+  const { notifyError, notifyInfo } = useNotification();
 
   const [date, setDate] = useState(() => new Date().toISOString().split('T')[0]);
   const [apod, setApod] = useState(null);
@@ -43,174 +45,155 @@ const ApodViewer = ({ isFavorited, onToggleFavorite }) => {
     fetchApod();
   }, [date, notifyError]);
 
-  return (
-    <div className="space-y-6">
-      {/* Date selector toolbar */}
-      <div className="glass-panel p-4 rounded-2xl border border-slate-800 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-        <div className="flex items-center gap-2">
-          <Sparkles className="w-5 h-5 text-cyan-400" />
-          <span className="font-semibold text-sm text-slate-100">
-            Select Observation Date:
-          </span>
-        </div>
+  const handleFavorite = () =>
+    onToggleFavorite({
+      itemType: 'apod',
+      itemId: apod.date,
+      title: apod.title,
+      imageUrl: apod.url,
+      description: apod.explanation,
+    });
 
-        <div className="flex items-center gap-3">
-          <div className="relative">
-            <input
-              type="date"
-              value={date}
-              max={new Date().toISOString().split('T')[0]}
-              min="1995-06-16"
-              onChange={(e) => setDate(e.target.value)}
-              className="px-3.5 py-1.5 rounded-xl bg-slate-900 border border-slate-700 text-sm text-slate-200 focus:outline-none focus:border-cyan-500 transition cursor-pointer"
-            />
-          </div>
-          <button
-            onClick={() => setDate(new Date().toISOString().split('T')[0])}
-            className="px-3 py-1.5 rounded-xl text-xs font-medium border border-slate-700 text-slate-300 hover:text-white hover:bg-slate-800 transition"
-          >
+  return (
+    <div className="space-y-10">
+      {/* Observation controls */}
+      <div className="grid grid-cols-12 gap-x-6 gap-y-4 items-end border-b border-line pb-6">
+        <div className="col-span-12 sm:col-span-5 lg:col-span-3">
+          <Input
+            label="Observation date"
+            type="date"
+            value={date}
+            max={new Date().toISOString().split('T')[0]}
+            min="1995-06-16"
+            onChange={(e) => setDate(e.target.value)}
+            inputClassName="telemetry"
+          />
+        </div>
+        <div className="col-span-12 sm:col-span-7 lg:col-span-9 flex flex-wrap items-center gap-2 sm:justify-end">
+          <span className="hidden lg:inline label text-fg-faint mr-auto">Archive window 1995.06.16 — today</span>
+          <Button variant="secondary" size="sm" onClick={() => setDate(new Date().toISOString().split('T')[0])}>
             Today
-          </button>
-          <button
+          </Button>
+          <Button
+            variant="secondary"
+            size="sm"
+            icon={Shuffle}
             onClick={handleSurpriseMe}
-            className="flex items-center gap-1.5 px-3.5 py-1.5 rounded-xl text-xs font-bold bg-gradient-to-r from-cyan-500 to-indigo-600 text-white shadow-glow-cyan hover:opacity-95 transition"
             title="Discover a random historical Astronomy Picture of the Day"
           >
-            <Shuffle className="w-3.5 h-3.5" />
-            <span>Surprise Me</span>
-          </button>
+            Random date
+          </Button>
         </div>
       </div>
 
       {loading ? (
-        <div className="glass-panel rounded-2xl p-12 border border-slate-800">
-          <Loader message="Receiving high-resolution astronomical telemetry..." />
+        <div className="grid grid-cols-12 gap-6" role="status" aria-label="Loading picture of the day">
+          <Skeleton className="col-span-12 lg:col-span-8 aspect-[16/10]" />
+          <div className="col-span-12 lg:col-span-4 space-y-4">
+            <Skeleton className="h-3 w-24" />
+            <Skeleton className="h-12 w-full" />
+            <Skeleton className="h-3 w-full" />
+            <Skeleton className="h-3 w-5/6" />
+            <Skeleton className="h-3 w-4/6" />
+          </div>
         </div>
       ) : !apod ? (
-        <div className="glass-panel rounded-2xl p-12 border border-slate-800 text-center text-slate-400">
-          No astronomical data found for this date.
-        </div>
+        <EmptyState code="NO DATA · APOD" title="Nothing was published for this date." description="Pick another observation date or jump to a random entry in the archive." />
       ) : (
-        <div className="glass-panel rounded-2xl overflow-hidden border border-slate-800 shadow-2xl">
-          <div className="grid grid-cols-1 lg:grid-cols-12 gap-0">
-            {/* Media presentation (Left 7 cols) */}
-            <div className="lg:col-span-7 relative bg-black flex items-center justify-center min-h-[380px] max-h-[600px] overflow-hidden group">
-              {apod.media_type === 'video' ? (
-                <iframe
+        <article className="grid grid-cols-12 gap-x-6 gap-y-8">
+          {/* Full-bleed media with mono caption overlay */}
+          <figure className="group col-span-12 lg:col-span-8 relative border border-line bg-black crosshairs">
+            {apod.media_type === 'video' ? (
+              <iframe src={apod.url} title={apod.title} className="w-full aspect-video border-0" allowFullScreen />
+            ) : (
+              <>
+                <LazyImage
                   src={apod.url}
-                  title={apod.title}
-                  className="w-full h-full min-h-[400px] border-0"
-                  allowFullScreen
+                  alt={apod.title}
+                  wrapperClassName="w-full"
+                  className="w-full max-h-[78vh] object-cover group-hover:scale-[1.015]"
                 />
-              ) : (
-                <>
-                  <img
-                    src={apod.url}
-                    alt={apod.title}
-                    className="w-full h-full object-cover max-h-[580px] transition-transform duration-700 group-hover:scale-105"
-                  />
-                  <button
-                    onClick={() => setShowHdModal(true)}
-                    className="absolute top-4 right-4 p-2.5 rounded-xl bg-black/60 text-white backdrop-blur-md border border-white/20 opacity-0 group-hover:opacity-100 transition-all hover:bg-black/90 shadow-xl"
-                    title="View Full HD"
-                  >
-                    <Maximize2 className="w-5 h-5" />
-                  </button>
-                </>
+                <button
+                  type="button"
+                  onClick={() => setShowHdModal(true)}
+                  aria-label="Open full-screen viewer"
+                  className="absolute top-3 right-3 h-9 px-3 flex items-center gap-2 bg-black/80 border border-line-strong label text-fg hover:border-fg-muted"
+                >
+                  <Maximize2 className="w-3.5 h-3.5" strokeWidth={1.5} aria-hidden="true" />
+                  <span>View</span>
+                </button>
+              </>
+            )}
+            <figcaption className="absolute left-0 bottom-0 max-w-full bg-black/85 border-t border-r border-line px-4 py-3 font-mono text-[0.6875rem] uppercase tracking-label text-fg-muted flex flex-wrap gap-x-4 gap-y-1">
+              <span className="text-signal">{apod.date}</span>
+              <span className="text-fg truncate max-w-[22rem]">{apod.title}</span>
+              {apod.copyright && <span className="truncate max-w-[16rem]">© {apod.copyright}</span>}
+            </figcaption>
+          </figure>
+
+          {/* Editorial column */}
+          <div className="col-span-12 lg:col-span-4 flex flex-col">
+            <span className="label text-fg-faint">Astronomy picture of the day</span>
+            <h2 className="mt-3 font-display text-display-sm text-fg">{apod.title}</h2>
+            <p className="mt-6 text-[0.95rem] text-fg-muted leading-[1.75] lg:max-h-[24rem] lg:overflow-y-auto lg:pr-3 first-letter:font-display first-letter:text-5xl first-letter:leading-[0.8] first-letter:float-left first-letter:mr-2 first-letter:mt-1 first-letter:text-fg">
+              {apod.explanation}
+            </p>
+
+            <dl className="mt-8 border-t border-line divide-y divide-line">
+              <div className="grid grid-cols-[6rem_1fr] py-2.5">
+                <dt className="label text-fg-faint">Date</dt>
+                <dd className="telemetry text-xs text-fg">{apod.date}</dd>
+              </div>
+              <div className="grid grid-cols-[6rem_1fr] py-2.5">
+                <dt className="label text-fg-faint">Media</dt>
+                <dd className="font-mono text-xs uppercase text-fg">{apod.media_type || 'image'}</dd>
+              </div>
+              <div className="grid grid-cols-[6rem_1fr] py-2.5">
+                <dt className="label text-fg-faint">Credit</dt>
+                <dd className="font-mono text-xs text-fg">{apod.copyright || 'NASA / Public domain'}</dd>
+              </div>
+            </dl>
+
+            <div className="mt-8 flex flex-wrap items-center gap-4">
+              <SaveToggle saved={isFavorited} onClick={handleFavorite} savedLabel="Saved to favorites" label="Save to favorites" />
+              {apod.hdurl && (
+                <Button variant="link" onClick={() => setShowHdModal(true)} iconRight={Maximize2}>
+                  Full HD
+                </Button>
               )}
             </div>
-
-            {/* Description & Metadata (Right 5 cols) */}
-            <div className="lg:col-span-5 p-6 sm:p-8 flex flex-col justify-between space-y-6">
-              <div className="space-y-4">
-                <div className="flex items-center justify-between text-xs text-slate-400 font-mono">
-                  <span className="flex items-center gap-1.5 text-cyan-400">
-                    <Calendar className="w-3.5 h-3.5" />
-                    {apod.date}
-                  </span>
-                  {apod.copyright && (
-                    <span className="truncate max-w-[180px]">
-                      Credit: {apod.copyright}
-                    </span>
-                  )}
-                </div>
-
-                <h2 className="text-xl sm:text-2xl font-extrabold text-slate-100 tracking-tight leading-snug">
-                  {apod.title}
-                </h2>
-
-                <div className="max-h-[300px] overflow-y-auto pr-2">
-                  <p className="text-sm text-slate-300 leading-relaxed font-normal">
-                    {apod.explanation}
-                  </p>
-                </div>
-              </div>
-
-              {/* Action buttons */}
-              <div className="pt-4 border-t border-slate-800 flex items-center justify-between gap-3">
-                <button
-                  onClick={() => onToggleFavorite({
-                    itemType: 'apod',
-                    itemId: apod.date,
-                    title: apod.title,
-                    imageUrl: apod.url,
-                    description: apod.explanation,
-                  })}
-                  className={`flex items-center gap-2 px-4 py-2.5 rounded-xl text-sm font-semibold transition ${
-                    isFavorited
-                      ? 'bg-rose-500/20 text-rose-300 border border-rose-500/40'
-                      : 'bg-slate-800/80 hover:bg-slate-800 text-slate-200 border border-slate-700'
-                  }`}
-                >
-                  <Heart
-                    className={`w-4 h-4 ${isFavorited ? 'fill-rose-400 text-rose-400' : ''}`}
-                  />
-                  <span>{isFavorited ? 'Saved to Favorites' : 'Add to Favorites'}</span>
-                </button>
-
-                {apod.hdurl && (
-                  <button
-                    onClick={() => setShowHdModal(true)}
-                    className="flex items-center gap-1.5 text-xs text-cyan-400 hover:text-cyan-300 font-medium transition"
-                  >
-                    <span>Full HD</span>
-                    <Maximize2 className="w-3.5 h-3.5" />
-                  </button>
-                )}
-              </div>
-            </div>
           </div>
-        </div>
+        </article>
       )}
 
-      {/* HD Modal */}
-      <Modal
+      {/* Full-screen viewer (same open state as the original HD modal) */}
+      <ImageViewer
         isOpen={showHdModal}
         onClose={() => setShowHdModal(false)}
+        src={apod?.hdurl || apod?.url}
+        alt={apod?.title}
+        kicker={`APOD — ${apod?.date || ''}`}
         title={apod?.title || 'HD Astronomy Photograph'}
-        maxWidth="max-w-5xl"
-      >
-        <div className="space-y-4">
-          <div className="max-h-[70vh] overflow-hidden rounded-xl bg-black flex items-center justify-center">
-            <img
-              src={apod?.hdurl || apod?.url}
-              alt={apod?.title}
-              className="max-h-[70vh] w-auto object-contain mx-auto"
-            />
-          </div>
-          <div className="flex items-center justify-between text-xs text-slate-400">
-            <span>Astronomy Picture of the Day — {apod?.date}</span>
+        meta={[
+          { label: 'Date', value: apod?.date },
+          { label: 'Credit', value: apod?.copyright || 'NASA / Public domain' },
+          { label: 'Resolution', value: apod?.hdurl ? 'HD original' : 'Standard' },
+        ]}
+        actions={
+          <>
+            {apod && <SaveToggle saved={isFavorited} onClick={handleFavorite} savedLabel="Saved" label="Save" size="sm" />}
             <a
               href={apod?.hdurl || apod?.url}
               target="_blank"
               rel="noreferrer"
-              className="flex items-center gap-1 text-cyan-400 hover:underline"
+              className="link-sweep inline-flex items-center gap-1.5 font-mono text-[0.6875rem] uppercase tracking-label text-fg hover:text-signal"
             >
-              Open original file <ExternalLink className="w-3.5 h-3.5" />
+              Open original file <ExternalLink className="w-3.5 h-3.5" strokeWidth={1.5} aria-hidden="true" />
+              <span className="sr-only">(opens in a new tab)</span>
             </a>
-          </div>
-        </div>
-      </Modal>
+          </>
+        }
+      />
     </div>
   );
 };

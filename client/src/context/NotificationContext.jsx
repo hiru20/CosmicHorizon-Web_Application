@@ -31,28 +31,37 @@ export const NotificationProvider = ({ children }) => {
     >
       {children}
       {/* Toast Notification Container */}
-      <div className="fixed bottom-5 right-5 z-50 flex flex-col gap-2 max-w-sm w-full pointer-events-none">
+      <div
+        className="fixed bottom-4 right-4 sm:right-6 left-4 sm:left-auto z-[60] flex flex-col gap-1.5 sm:max-w-md sm:w-full pointer-events-none"
+        role="region"
+        aria-live="polite"
+        aria-label="Notifications"
+      >
         {toasts.map((toast) => (
           <div
             key={toast.id}
-            className={`pointer-events-auto flex items-start gap-3 p-4 rounded-xl border shadow-xl backdrop-blur-md transition-all duration-300 animate-slide-up ${
+            role={toast.type === 'error' ? 'alert' : 'status'}
+            className={`pointer-events-auto flex items-center gap-3 min-h-11 pl-3 pr-1 border bg-black transition-all duration-300 animate-slide-up ${
               toast.type === 'success'
-                ? 'bg-slate-900/90 border-emerald-500/50 text-emerald-300 shadow-emerald-950/40'
+                ? 'border-line-strong text-live'
                 : toast.type === 'error'
-                ? 'bg-slate-900/90 border-rose-500/50 text-rose-300 shadow-rose-950/40'
-                : 'bg-slate-900/90 border-cyan-500/50 text-cyan-300 shadow-cyan-950/40'
+                ? 'border-danger/60 text-danger'
+                : 'border-line-strong text-signal'
             }`}
           >
-            {toast.type === 'success' && <CheckCircle2 className="w-5 h-5 flex-shrink-0 text-emerald-400 mt-0.5" />}
-            {toast.type === 'error' && <AlertCircle className="w-5 h-5 flex-shrink-0 text-rose-400 mt-0.5" />}
-            {toast.type === 'info' && <Info className="w-5 h-5 flex-shrink-0 text-cyan-400 mt-0.5" />}
-            
-            <p className="text-sm font-medium flex-1 text-slate-100">{toast.message}</p>
+            {toast.type === 'success' && <CheckCircle2 className="w-3.5 h-3.5 flex-shrink-0" strokeWidth={1.5} aria-hidden="true" />}
+            {toast.type === 'error' && <AlertCircle className="w-3.5 h-3.5 flex-shrink-0" strokeWidth={1.5} aria-hidden="true" />}
+            {toast.type === 'info' && <Info className="w-3.5 h-3.5 flex-shrink-0" strokeWidth={1.5} aria-hidden="true" />}
+            <span className="font-mono text-[0.625rem] uppercase tracking-label flex-shrink-0">
+              {toast.type === 'success' ? 'OK' : toast.type === 'error' ? 'ERR' : 'MSG'}
+            </span>
+            <p className="font-mono text-xs flex-1 text-fg py-2.5 border-l border-line pl-3">{toast.message}</p>
             <button
               onClick={() => removeToast(toast.id)}
-              className="text-slate-400 hover:text-white transition-colors"
+              aria-label="Dismiss notification"
+              className="h-9 w-9 flex items-center justify-center text-fg-muted hover:text-fg transition-colors flex-shrink-0"
             >
-              <X className="w-4 h-4" />
+              <X className="w-3.5 h-3.5" strokeWidth={1.5} />
             </button>
           </div>
         ))}

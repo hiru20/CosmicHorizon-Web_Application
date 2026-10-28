@@ -1,7 +1,9 @@
-import React from 'react';
-import { Rocket, MapPin, Calendar, Bookmark, BookmarkCheck, Info, Bell, BellRing } from 'lucide-react';
+import React, { useId } from 'react';
+import { Bell, BellRing, ChevronDown, ArrowUpRight } from 'lucide-react';
 import CountdownTimer from './CountdownTimer';
+import WatchToggle from './WatchToggle';
 import Badge from '../common/Badge';
+import Button from '../common/Button';
 
 const REMINDER_LABELS = {
   '15m': '15m before',
@@ -9,6 +11,27 @@ const REMINDER_LABELS = {
   '24h': '1d before',
 };
 
+const FALLBACK_IMAGE = 'https://images.unsplash.com/photo-1517976487502-53b7c2fb2b6a?w=800';
+
+const getStatusVariant = (statusName) => {
+  const s = (statusName || '').toLowerCase();
+  if (s.includes('go')) return 'go';
+  if (s.includes('tbd')) return 'tbd';
+  if (s.includes('hold')) return 'hold';
+  return 'default';
+};
+
+/** Outlined mono status chip (go → live, tbd → dashed, hold → danger) */
+export const LaunchStatusTag = ({ status }) => <Badge variant={getStatusVariant(status)}>{status || 'Pending'}</Badge>;
+
+// Shared column template for the manifest header and rows (md and up)
+export const MANIFEST_COLUMNS =
+  'md:grid-cols-[7.5rem_minmax(0,2.2fr)_minmax(0,1fr)_minmax(0,1fr)_7rem_auto] xl:grid-cols-[8rem_minmax(0,2.2fr)_minmax(0,1fr)_minmax(0,1fr)_minmax(0,1.1fr)_7rem_auto]';
+
+/**
+ * One row of the launch manifest. Collapsed: T-minus, mission, vehicle, provider, pad, status, actions.
+ * Expanded: mission brief, imagery and the full set of actions.
+ */
 const LaunchCard = ({
   launch,
   isInWatchlist,
@@ -16,14 +39,11 @@ const LaunchCard = ({
   onToggleWatchlist,
   onOpenReminder,
   onSelectDetails,
+  expanded = false,
+  onToggleExpand,
+  index,
 }) => {
-  const getStatusVariant = (statusName) => {
-    const s = (statusName || '').toLowerCase();
-    if (s.includes('go')) return 'go';
-    if (s.includes('tbd')) return 'tbd';
-    if (s.includes('hold')) return 'hold';
-    return 'default';
-  };
+  const panelId = useId();
 
   const formattedDate = launch.net
     ? new Date(launch.net).toLocaleDateString(undefined, {
@@ -37,129 +57,157 @@ const LaunchCard = ({
     : 'Date TBD';
 
   const hasReminder = reminderTime && reminderTime !== 'none';
+  const provider = launch.launch_service_provider?.name || 'Space Provider';
+  const rocket = launch.rocket?.configuration?.full_name || 'Rocket Launcher';
+  const pad = launch.pad?.location?.name || 'Spaceport Pad';
+
+  const reminderButton = (
+    <button
+      type="button"
+      onClick={() => onOpenReminder && onOpenReminder(launch)}
+      aria-label={hasReminder ? `Reminder set (${REMINDER_LABELS[reminderTime] || reminderTime}). Change reminder for ${launch.name}` : `Set launch reminder for ${launch.name}`}
+      title={hasReminder ? `Reminder set (${REMINDER_LABELS[reminderTime]})` : 'Set Launch Reminder'}
+      className={`h-9 w-9 flex items-center justify-center border transition-colors ${
+        hasReminder ? 'border-signal-line text-signal' : 'border-line-strong text-fg-muted hover:text-fg hover:border-fg-muted'
+      }`}
+    >
+      {hasReminder ? <BellRing className="w-3.5 h-3.5" strokeWidth={1.5} /> : <Bell className="w-3.5 h-3.5" strokeWidth={1.5} />}
+    </button>
+  );
 
   return (
-    <div className="glass-panel rounded-2xl overflow-hidden border border-slate-800 glass-panel-hover flex flex-col justify-between group">
-      {/* Top Banner / Image */}
-      <div className="relative h-44 w-full overflow-hidden bg-slate-900">
-        <img
-          src={launch.image || 'https://images.unsplash.com/photo-1517976487502-53b7c2fb2b6a?w=800'}
-          alt={launch.name}
-          className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
-          onError={(e) => {
-            e.target.src = 'https://images.unsplash.com/photo-1517976487502-53b7c2fb2b6a?w=800';
-          }}
-        />
-        <div className="absolute inset-0 bg-gradient-to-t from-space-card via-space-card/40 to-transparent" />
+    <li className={`group relative border-b border-line transition-colors ${expanded ? 'bg-ink-900' : 'hover:bg-ink-800'}`}>
+      {/* Left signal hairline on hover / when open */}
+      <span
+        className={`absolute left-0 top-0 bottom-0 w-px bg-signal origin-top transition-transform duration-300 ease-out ${
+          expanded ? 'scale-y-100' : 'scale-y-0 group-hover:scale-y-100'
+        }`}
+        aria-hidden="true"
+      />
 
-        {/* Top Floating Badges */}
-        <div className="absolute top-3 left-3 right-3 flex items-center justify-between">
-          <div className="flex items-center gap-1.5">
-            <Badge variant={getStatusVariant(launch.status?.name)}>
-              {launch.status?.name || 'Pending'}
-            </Badge>
-            {hasReminder && (
-              <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold bg-amber-500/20 text-amber-300 border border-amber-500/40 backdrop-blur-md">
-                <BellRing className="w-3 h-3" />
-                {REMINDER_LABELS[reminderTime] || reminderTime}
+      {/* Row */}
+      <div className={`grid grid-cols-[5.5rem_minmax(0,1fr)] ${MANIFEST_COLUMNS} gap-x-4 md:gap-x-6 gap-y-3 items-center px-4 md:px-5 py-5 md:py-4`}>
+        {/* T-minus */}
+        <div className="row-span-2 md:row-span-1 self-start md:self-center">
+          <span className="sr-only">T-minus: </span>
+          <CountdownTimer targetDate={launch.net} variant="stacked" className="md:hidden" />
+          <CountdownTimer targetDate={launch.net} className="hidden md:inline" />
+        </div>
+
+        {/* Mission */}
+        <div className="min-w-0">
+          <button
+            type="button"
+            onClick={onToggleExpand}
+            aria-expanded={expanded}
+            aria-controls={panelId}
+            className="text-left w-full"
+          >
+            <span className="flex items-baseline gap-2.5">
+              {index && <span className="hidden md:inline font-mono text-[0.625rem] text-fg-faint tabular-nums">{index}</span>}
+              <span className="font-display text-2xl md:text-xl leading-tight text-fg group-hover:text-fg line-clamp-2 md:line-clamp-1">
+                {launch.name}
               </span>
-            )}
-          </div>
-
-          {/* Action Icons: Remind Me + Watchlist Toggle */}
-          <div className="flex items-center gap-1.5">
-            <button
-              onClick={() => onOpenReminder && onOpenReminder(launch)}
-              className={`p-2 rounded-xl backdrop-blur-md transition-all shadow-lg ${
-                hasReminder
-                  ? 'bg-amber-500 text-black'
-                  : 'bg-black/50 text-slate-300 hover:text-white hover:bg-black/70'
-              }`}
-              title={hasReminder ? `Reminder set (${REMINDER_LABELS[reminderTime]})` : 'Set Launch Reminder'}
-            >
-              {hasReminder ? <BellRing className="w-4 h-4" /> : <Bell className="w-4 h-4" />}
-            </button>
-
-            <button
-              onClick={() => onToggleWatchlist(launch)}
-              className={`p-2 rounded-xl backdrop-blur-md transition-all shadow-lg ${
-                isInWatchlist
-                  ? 'bg-cyan-500 text-black shadow-glow-cyan'
-                  : 'bg-black/50 text-slate-300 hover:text-white hover:bg-black/70'
-              }`}
-              title={isInWatchlist ? 'Remove from Watchlist' : 'Add to Watchlist'}
-            >
-              {isInWatchlist ? (
-                <BookmarkCheck className="w-4 h-4 fill-black" />
-              ) : (
-                <Bookmark className="w-4 h-4" />
-              )}
-            </button>
-          </div>
-        </div>
-
-        {/* Launch Provider Agency */}
-        <div className="absolute bottom-2 left-4 text-xs font-semibold text-cyan-400 uppercase tracking-wider">
-          {launch.launch_service_provider?.name || 'Space Provider'}
-        </div>
-      </div>
-
-      {/* Body Details */}
-      <div className="p-5 flex-1 flex flex-col justify-between space-y-4">
-        <div>
-          <h3 className="font-bold text-base text-slate-100 group-hover:text-cyan-300 transition line-clamp-1">
-            {launch.name}
-          </h3>
-
-          <p className="text-xs text-slate-400 mt-1 line-clamp-2 leading-relaxed">
-            {launch.mission?.description || 'Payload deployment and space exploration mission.'}
+            </span>
+          </button>
+          {/* Mobile meta line */}
+          <p className="md:hidden mt-1.5 font-mono text-[0.6875rem] text-fg-muted truncate">
+            {rocket} · {provider}
           </p>
         </div>
 
-        {/* Metadata info */}
-        <div className="space-y-2 pt-2 border-t border-slate-800/80 text-xs text-slate-400">
-          <div className="flex items-center gap-2">
-            <Rocket className="w-3.5 h-3.5 text-indigo-400 flex-shrink-0" />
-            <span className="truncate">{launch.rocket?.configuration?.full_name || 'Rocket Launcher'}</span>
-          </div>
+        {/* Vehicle / provider / pad (md+) */}
+        <span className="hidden md:block font-mono text-[0.6875rem] text-fg-muted truncate">
+          <span className="sr-only">Rocket: </span>
+          {rocket}
+        </span>
+        <span className="hidden md:block font-mono text-[0.6875rem] text-fg-muted truncate">
+          <span className="sr-only">Provider: </span>
+          {provider}
+        </span>
+        <span className="hidden xl:block font-mono text-[0.6875rem] text-fg-muted truncate">
+          <span className="sr-only">Pad: </span>
+          {pad}
+        </span>
 
-          <div className="flex items-center gap-2">
-            <MapPin className="w-3.5 h-3.5 text-rose-400 flex-shrink-0" />
-            <span className="truncate">{launch.pad?.location?.name || 'Spaceport Pad'}</span>
-          </div>
-
-          <div className="flex items-center gap-2">
-            <Calendar className="w-3.5 h-3.5 text-emerald-400 flex-shrink-0" />
-            <span>{formattedDate}</span>
-          </div>
+        {/* Status + actions (mobile: one line under the mission) */}
+        <div className="col-start-2 md:col-start-auto flex items-center gap-2 md:block">
+          <LaunchStatusTag status={launch.status?.name} />
+          {hasReminder && (
+            <span className="md:hidden">
+              <Badge variant="signal">{REMINDER_LABELS[reminderTime] || reminderTime}</Badge>
+            </span>
+          )}
         </div>
 
-        {/* Live Countdown Footer */}
-        <div className="pt-3 border-t border-slate-800 flex items-center justify-between gap-2">
-          <CountdownTimer targetDate={launch.net} />
-
-          <div className="flex items-center gap-3">
-            <button
-              onClick={() => onOpenReminder && onOpenReminder(launch)}
-              className={`flex items-center gap-1 text-xs font-medium transition ${
-                hasReminder ? 'text-amber-400 hover:text-amber-300' : 'text-slate-400 hover:text-amber-400'
-              }`}
-            >
-              <Bell className="w-3.5 h-3.5" />
-              <span>{hasReminder ? 'Reminder On' : 'Remind Me'}</span>
-            </button>
-
-            <button
-              onClick={() => onSelectDetails(launch)}
-              className="flex items-center gap-1 text-xs font-medium text-slate-300 hover:text-cyan-400 transition"
-            >
-              <span>Details</span>
-              <Info className="w-3.5 h-3.5" />
-            </button>
-          </div>
+        <div className="col-start-2 md:col-start-auto flex items-center gap-1.5 md:justify-end">
+          {reminderButton}
+          <WatchToggle pressed={isInWatchlist} onClick={() => onToggleWatchlist(launch)} aria-label={isInWatchlist ? `Remove ${launch.name} from Watchlist` : `Add ${launch.name} to Watchlist`} />
+          <button
+            type="button"
+            onClick={onToggleExpand}
+            aria-expanded={expanded}
+            aria-controls={panelId}
+            aria-label={expanded ? `Collapse ${launch.name}` : `Expand ${launch.name}`}
+            className="h-9 w-9 flex items-center justify-center text-fg-muted hover:text-fg border border-transparent hover:border-line-strong transition-colors"
+          >
+            <ChevronDown className={`w-4 h-4 transition-transform duration-300 ${expanded ? 'rotate-180' : ''}`} strokeWidth={1.5} />
+          </button>
         </div>
       </div>
-    </div>
+
+      {/* Expanded brief */}
+      <div id={panelId} hidden={!expanded}>
+        {expanded && (
+          <div className="grid grid-cols-12 gap-x-6 gap-y-6 px-4 md:px-5 pb-6 pt-1 animate-fade-in">
+            <div className="col-span-12 md:col-span-4 relative overflow-hidden border border-line">
+              <img
+                src={launch.image || FALLBACK_IMAGE}
+                alt={launch.name}
+                loading="lazy"
+                className="img-mono w-full aspect-[16/10] object-cover"
+                onError={(e) => {
+                  e.target.src = FALLBACK_IMAGE;
+                }}
+              />
+              <span className="absolute bottom-0 left-0 right-0 px-3 py-2 bg-black/80 label text-fg-muted truncate">{provider}</span>
+            </div>
+
+            <div className="col-span-12 md:col-span-5 space-y-3">
+              <span className="label text-fg-faint">Mission brief</span>
+              <p className="text-sm text-fg-muted leading-relaxed">
+                {launch.mission?.description || 'Payload deployment and space exploration mission.'}
+              </p>
+            </div>
+
+            <div className="col-span-12 md:col-span-3 flex flex-col gap-5">
+              <dl className="grid grid-cols-[4.5rem_1fr] gap-y-2 font-mono text-[0.6875rem]">
+                <dt className="text-fg-faint uppercase tracking-label">NET</dt>
+                <dd className="text-fg">{formattedDate}</dd>
+                <dt className="text-fg-faint uppercase tracking-label">Orbit</dt>
+                <dd className="text-fg">{launch.mission?.orbit?.name || 'Low Earth Orbit (LEO)'}</dd>
+                <dt className="text-fg-faint uppercase tracking-label">Pad</dt>
+                <dd className="text-fg">{pad}</dd>
+                {hasReminder && (
+                  <>
+                    <dt className="text-fg-faint uppercase tracking-label">Alert</dt>
+                    <dd className="text-signal">{REMINDER_LABELS[reminderTime] || reminderTime}</dd>
+                  </>
+                )}
+              </dl>
+              <div className="flex flex-wrap gap-2 mt-auto">
+                <Button variant="secondary" size="sm" iconRight={ArrowUpRight} onClick={() => onSelectDetails(launch)}>
+                  Full brief
+                </Button>
+                <Button variant="secondary" size="sm" icon={hasReminder ? BellRing : Bell} onClick={() => onOpenReminder && onOpenReminder(launch)}>
+                  {hasReminder ? 'Reminder on' : 'Remind me'}
+                </Button>
+              </div>
+            </div>
+          </div>
+        )}
+      </div>
+    </li>
   );
 };
 

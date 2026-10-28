@@ -1,9 +1,16 @@
 import React, { useEffect, useRef, useState } from 'react';
 import L from 'leaflet';
 import 'leaflet/dist/leaflet.css';
-import { Crosshair, Layers, ZoomIn, ZoomOut, Gamepad2, CheckCircle2, RotateCcw, Trophy, MapPin, X } from 'lucide-react';
+import { Crosshair, Plus, Minus, CheckCircle2, RotateCcw, X, Target } from 'lucide-react';
+import Button from '../common/Button';
+import { computeTerminator } from './terminator';
 
 const TILE_LAYERS = {
+  dark: {
+    name: 'Dark',
+    url: 'https://{s}.basemaps.cartocdn.com/dark_nolabels/{z}/{x}/{y}{r}.png',
+    attribution: '&copy; OpenStreetMap contributors &copy; CARTO',
+  },
   satellite: {
     name: 'Satellite Earth',
     url: 'https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}',
@@ -21,6 +28,16 @@ const TILE_LAYERS = {
   },
 };
 
+// Monochrome treatment per tile source (applied to a wrapper, never to the Leaflet container itself)
+const TILE_FILTER_CLASS = {
+  dark: '',
+  satellite: 'map-mono',
+  topo: 'map-mono',
+  osmStandard: 'map-mono-invert',
+};
+
+const SIGNAL = '#FF5A1F';
+
 // Haversine great-circle distance in km between two [lat, lng] coordinates
 const calculateDistanceKm = (lat1, lon1, lat2, lon2) => {
   const R = 6371; // Earth radius in km
@@ -33,6 +50,23 @@ const calculateDistanceKm = (lat1, lon1, lat2, lon2) => {
   return Math.round(R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a)));
 };
 
+const fmtCoord = (v, pos, neg) => (typeof v === 'number' ? `${Math.abs(v).toFixed(2)}° ${v > 0 ? pos : neg}` : '—');
+
+const MapControlButton = ({ label, onClick, active = false, children }) => (
+  <button
+    type="button"
+    onClick={onClick}
+    aria-label={label}
+    title={label}
+    aria-pressed={active || undefined}
+    className={`h-9 min-w-9 px-2.5 flex items-center justify-center gap-2 border bg-black font-mono text-[0.625rem] uppercase tracking-label transition-colors ${
+      active ? 'border-signal-line text-signal' : 'border-line-strong text-fg-muted hover:text-fg hover:border-line-bright'
+    }`}
+  >
+    {children}
+  </button>
+);
+
 const ISSMap = ({ telemetry, trajectory = [] }) => {
   const mapContainerRef = useRef(null);
   const mapInstanceRef = useRef(null);
@@ -41,8 +75,11 @@ const ISSMap = ({ telemetry, trajectory = [] }) => {
   const polylineRef = useRef(null);
   const guessMarkerRef = useRef(null);
   const guessLineRef = useRef(null);
+  // Presentation-only layers
+  const trailFadeRef = useRef(null);
+  const terminatorRef = useRef(null);
 
-  const [selectedTile, setSelectedTile] = useState('satellite');
+  const [selectedTile, setSelectedTile] = useState('dark');
   const [autoCenter, setAutoCenter] = useState(true);
 
   // "Guess the ISS Location" Mini-Game State
@@ -80,17 +117,14 @@ const ISSMap = ({ telemetry, trajectory = [] }) => {
     }).addTo(map);
     tileLayerRef.current = tileLayer;
 
-    // Custom Glowing ISS DivIcon
+    // ISS marker: signal-orange point with a thin pulsing ring
     const issIcon = L.divIcon({
       className: 'custom-iss-icon',
       html: `
-        <div style="position: relative; width: 36px; height: 36px; display: flex; align-items: center; justify-content: center;">
-          <div style="position: absolute; width: 36px; height: 36px; border-radius: 50%; background: rgba(6, 182, 212, 0.25); animation: ping 2s cubic-bezier(0, 0, 0.2, 1) infinite;"></div>
-          <div style="position: absolute; width: 22px; height: 22px; border-radius: 50%; background: rgba(56, 189, 248, 0.4); border: 2px solid #22d3ee; box-shadow: 0 0 15px #06b6d4;"></div>
-          <svg style="width: 18px; height: 18px; color: #ffffff; z-index: 10;" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-            <circle cx="12" cy="12" r="3" fill="#ffffff"/>
-            <path d="M4 12h3M17 12h3M12 4v3M12 17v3M7.5 7.5l2 2M14.5 14.5l2 2M7.5 16.5l2-2M14.5 9.5l2-2"/>
-          </svg>
+        <div class="relative w-9 h-9 flex items-center justify-center">
+          <span class="absolute w-3 h-3 rounded-full border border-signal animate-pulse-dot"></span>
+          <span class="absolute w-7 h-7 rounded-full border border-signal/40"></span>
+          <span class="relative w-2.5 h-2.5 bg-signal"></span>
         </div>
       `,
       iconSize: [36, 36],
@@ -105,11 +139,12 @@ const ISSMap = ({ telemetry, trajectory = [] }) => {
       </div>`
     );
 
+    // Base ground track: faint hairline under the fading signal trail
     const polyline = L.polyline(trajectory, {
-      color: '#38bdf8',
-      weight: 2.5,
+      color: '#555555',
+      weight: 1,
       opacity: 0.7,
-      dashArray: '5, 8',
+      dashArray: '2, 6',
     }).addTo(map);
 
     // Map click handler for "Guess the ISS Location"
@@ -125,8 +160,10 @@ const ISSMap = ({ telemetry, trajectory = [] }) => {
       const guessIcon = L.divIcon({
         className: 'custom-guess-icon',
         html: `
-          <div style="position: relative; width: 32px; height: 32px; display: flex; align-items: center; justify-content: center;">
-            <div style="width: 20px; height: 20px; border-radius: 50%; background: rgba(244, 63, 94, 0.85); border: 2.5px solid #ffffff; box-shadow: 0 0 12px #f43f5e;"></div>
+          <div class="relative w-8 h-8 flex items-center justify-center">
+            <span class="absolute inset-x-0 top-1/2 h-px bg-fg"></span>
+            <span class="absolute inset-y-0 left-1/2 w-px bg-fg"></span>
+            <span class="relative w-3 h-3 border border-fg bg-black"></span>
           </div>
         `,
         iconSize: [32, 32],
@@ -194,6 +231,49 @@ const ISSMap = ({ telemetry, trajectory = [] }) => {
       polylineRef.current.setLatLngs(trajectory);
     }
   }, [telemetry, trajectory, autoCenter, gameMode]);
+
+  // Presentation: day/night terminator, refreshed every minute from the clock
+  useEffect(() => {
+    const map = mapInstanceRef.current;
+    if (!map) return undefined;
+    const polygon = L.polygon(computeTerminator(new Date()), {
+      stroke: false,
+      fillColor: '#000000',
+      fillOpacity: 0.38,
+      interactive: false,
+    }).addTo(map);
+    terminatorRef.current = polygon;
+    const id = setInterval(() => polygon.setLatLngs(computeTerminator(new Date())), 60000);
+    return () => {
+      clearInterval(id);
+      polygon.remove();
+      terminatorRef.current = null;
+    };
+  }, []);
+
+  // Presentation: fading signal-orange trail (newest segment brightest); hidden mid-guess
+  useEffect(() => {
+    const map = mapInstanceRef.current;
+    if (!map) return;
+    if (!trailFadeRef.current || !map.hasLayer(trailFadeRef.current)) trailFadeRef.current = L.layerGroup().addTo(map);
+    const group = trailFadeRef.current;
+    group.clearLayers();
+    if (gameMode && !gameResult) return;
+    const n = trajectory.length;
+    for (let i = 1; i < n; i += 1) {
+      const [lat1, lng1] = trajectory[i - 1];
+      const [lat2, lng2] = trajectory[i];
+      if (Math.abs(lng2 - lng1) > 180) continue; // skip antimeridian wrap
+      const t = i / (n - 1);
+      L.polyline(
+        [
+          [lat1, lng1],
+          [lat2, lng2],
+        ],
+        { color: SIGNAL, weight: 2, opacity: 0.08 + 0.87 * t * t, interactive: false, lineCap: 'butt' }
+      ).addTo(group);
+    }
+  }, [trajectory, gameMode, gameResult]);
 
   // Center map manually
   const handleRecenter = () => {
@@ -276,134 +356,65 @@ const ISSMap = ({ telemetry, trajectory = [] }) => {
       guessLineRef.current.setLatLngs(points);
     } else {
       guessLineRef.current = L.polyline(points, {
-        color: '#f59e0b',
-        weight: 3,
-        dashArray: '6, 6',
+        color: '#EDEDED',
+        weight: 1,
+        dashArray: '4, 6',
       }).addTo(mapInstanceRef.current);
     }
 
     mapInstanceRef.current.fitBounds(L.latLngBounds(points), { padding: [60, 60], maxZoom: 4 });
   };
 
-  return (
-    <div className="space-y-4">
-      {/* Guess the ISS Location Mini-Game Banner */}
-      <div className="glass-panel p-4 sm:p-5 rounded-2xl border border-slate-800 flex flex-col lg:flex-row lg:items-center justify-between gap-4">
-        <div className="flex items-start sm:items-center gap-3">
-          <div className="w-10 h-10 rounded-xl bg-amber-500/15 border border-amber-500/30 text-amber-400 flex items-center justify-center flex-shrink-0">
-            <Gamepad2 className="w-5 h-5" />
-          </div>
-          <div>
-            <div className="flex flex-wrap items-center gap-2">
-              <h3 className="text-sm font-bold text-white">Guess the ISS Location Challenge</h3>
-              {highScore > 0 && (
-                <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[11px] font-mono bg-amber-500/15 text-amber-300 border border-amber-500/30">
-                  <Trophy className="w-3 h-3" /> Best: {highScore} pts
-                </span>
-              )}
-            </div>
-            <p className="text-xs text-slate-400 mt-0.5">
-              {!gameMode
-                ? 'Hide the tracker marker, click anywhere on the world map to guess where the ISS is orbiting right now, and score points!'
-                : !gameResult
-                ? guessCoords
-                  ? `Pin placed at (${guessCoords.lat}°, ${guessCoords.lng}°). Click "Check My Guess" to reveal the ISS!`
-                  : 'ISS hidden! Click any spot on the world map below to place your red guess pin.'
-                : `You were ${gameResult.distanceKm.toLocaleString()} km away from the ISS!`}
-            </p>
-          </div>
-        </div>
+  const issHidden = gameMode && !gameResult;
 
-        <div className="flex flex-wrap items-center gap-2">
-          {!gameMode ? (
-            <button
-              type="button"
-              onClick={startGuessGame}
-              className="flex items-center gap-1.5 px-4 py-2 rounded-xl text-xs font-bold bg-gradient-to-r from-amber-500 to-orange-500 text-slate-950 shadow-lg hover:opacity-95 transition"
-            >
-              <Gamepad2 className="w-4 h-4" />
-              <span>Play Guess the ISS</span>
-            </button>
-          ) : (
+  return (
+    <div className="space-y-px">
+      {/* Map Container */}
+      <div className={`relative w-full h-[420px] sm:h-[560px] border border-line overflow-hidden ${TILE_FILTER_CLASS[selectedTile] || ''}`}>
+        <div ref={mapContainerRef} className="w-full h-full bg-ink cursor-crosshair" />
+
+        {/* Crosshair + coordinate grid overlay (hidden mid-guess so it can't give the answer away) */}
+        <div className="pointer-events-none absolute inset-0 z-[400]" aria-hidden="true">
+          {/* edge ticks */}
+          <div className="absolute inset-x-0 top-0 h-2 flex justify-between px-px">
+            {Array.from({ length: 25 }).map((_, i) => (
+              <span key={i} className={`w-px ${i % 4 === 0 ? 'h-2 bg-fg-faint' : 'h-1 bg-line-bright'}`} />
+            ))}
+          </div>
+          <div className="absolute inset-y-0 left-0 w-2 flex flex-col justify-between py-px">
+            {Array.from({ length: 17 }).map((_, i) => (
+              <span key={i} className={`h-px ${i % 4 === 0 ? 'w-2 bg-fg-faint' : 'w-1 bg-line-bright'}`} />
+            ))}
+          </div>
+          {!issHidden && (
             <>
-              {!gameResult && (
-                <button
-                  type="button"
-                  disabled={!guessCoords}
-                  onClick={handleCheckGuess}
-                  className="flex items-center gap-1.5 px-4 py-2 rounded-xl text-xs font-bold bg-cyan-500 text-slate-950 shadow-glow-cyan hover:bg-cyan-400 disabled:opacity-40 transition"
-                >
-                  <CheckCircle2 className="w-4 h-4" />
-                  <span>Check My Guess</span>
-                </button>
+              <span className="absolute left-0 right-0 top-1/2 h-px bg-fg/[0.08]" />
+              <span className="absolute top-0 bottom-0 left-1/2 w-px bg-fg/[0.08]" />
+              <span className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 w-14 h-14 border border-fg/[0.12] rounded-full" />
+              {autoCenter && telemetry && (
+                <>
+                  <span className="absolute left-3 top-1/2 -translate-y-[calc(100%+4px)] font-mono text-[0.625rem] text-fg-muted bg-black/70 px-1">
+                    LAT {fmtCoord(telemetry.latitude, 'N', 'S')}
+                  </span>
+                  <span className="absolute top-3 left-1/2 translate-x-1.5 font-mono text-[0.625rem] text-fg-muted bg-black/70 px-1">
+                    LON {fmtCoord(telemetry.longitude, 'E', 'W')}
+                  </span>
+                </>
               )}
-              <button
-                type="button"
-                onClick={startGuessGame}
-                className="flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-semibold bg-slate-800 text-slate-200 border border-slate-700 hover:bg-slate-700 transition"
-              >
-                <RotateCcw className="w-3.5 h-3.5" />
-                <span>{gameResult ? 'Play Again' : 'Reset Pin'}</span>
-              </button>
-              <button
-                type="button"
-                onClick={exitGuessGame}
-                className="flex items-center gap-1 px-3 py-2 rounded-xl text-xs font-semibold border border-slate-700 text-slate-400 hover:text-white transition"
-              >
-                <X className="w-3.5 h-3.5" />
-                <span>Exit Game</span>
-              </button>
             </>
           )}
         </div>
-      </div>
-
-      {/* Game Score Results Card */}
-      {gameResult && (
-        <div className="glass-panel p-4 rounded-2xl border border-amber-500/40 bg-amber-950/15 grid grid-cols-2 sm:grid-cols-4 gap-4 text-xs">
-          <div>
-            <span className="text-slate-400 block">Your Guess</span>
-            <span className="font-mono font-bold text-rose-300">
-              {guessCoords.lat}°, {guessCoords.lng}°
-            </span>
-          </div>
-          <div>
-            <span className="text-slate-400 block">Actual ISS Position</span>
-            <span className="font-mono font-bold text-cyan-300">
-              {gameResult.actualLat}°, {gameResult.actualLng}°
-            </span>
-          </div>
-          <div>
-            <span className="text-slate-400 block">Distance Between Points</span>
-            <span className="font-mono font-bold text-white text-sm">
-              {gameResult.distanceKm.toLocaleString()} km
-            </span>
-          </div>
-          <div>
-            <span className="text-slate-400 block">Score &amp; Rank</span>
-            <span className="font-mono font-black text-amber-400 text-sm">
-              {gameResult.score} pts • {gameResult.rank}
-            </span>
-          </div>
-        </div>
-      )}
-
-      {/* Map Container */}
-      <div className="relative w-full h-[420px] sm:h-[520px] rounded-2xl overflow-hidden border border-slate-800 shadow-2xl">
-        <div ref={mapContainerRef} className="w-full h-full bg-space-darkest cursor-crosshair" />
 
         {/* Map Style Switcher (Top Left) */}
-        <div className="absolute top-4 left-4 z-[400] flex flex-wrap items-center gap-1 p-1 rounded-xl bg-slate-900/85 border border-slate-700 backdrop-blur-md shadow-lg">
-          <Layers className="w-3.5 h-3.5 text-cyan-400 ml-2 mr-0.5 hidden sm:inline" />
+        <div className="absolute top-4 left-4 z-[400] flex flex-wrap items-center bg-black border border-line-strong" role="group" aria-label="Map tiles">
           {Object.entries(TILE_LAYERS).map(([key, layer]) => (
             <button
               key={key}
               type="button"
               onClick={() => setSelectedTile(key)}
-              className={`px-2.5 py-1 rounded-lg text-xs font-semibold transition ${
-                selectedTile === key
-                  ? 'bg-cyan-500 text-slate-950 shadow-glow-cyan'
-                  : 'text-slate-300 hover:text-white'
+              aria-pressed={selectedTile === key}
+              className={`h-8 px-2.5 font-mono text-[0.625rem] uppercase tracking-label transition-colors ${
+                selectedTile === key ? 'bg-fg text-black' : 'text-fg-muted hover:text-fg'
               }`}
             >
               {layer.name}
@@ -412,60 +423,132 @@ const ISSMap = ({ telemetry, trajectory = [] }) => {
         </div>
 
         {/* Floating Map Controls */}
-        <div className="absolute top-4 right-4 z-[400] flex flex-col gap-2">
+        <div className="absolute top-4 right-4 z-[400] flex flex-col items-end gap-1">
           {!gameMode && (
-            <button
-              onClick={handleRecenter}
-              className={`flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-semibold shadow-lg backdrop-blur-md border transition ${
-                autoCenter
-                  ? 'bg-cyan-500/20 text-cyan-300 border-cyan-500/50 shadow-glow-cyan'
-                  : 'bg-slate-900/80 text-slate-300 border-slate-700 hover:text-white'
-              }`}
-              title="Recenter and follow ISS"
-            >
-              <Crosshair className="w-4 h-4" />
-              <span>Follow ISS</span>
-            </button>
+            <MapControlButton label="Recenter and follow ISS" onClick={handleRecenter} active={autoCenter}>
+              <Crosshair className="w-3.5 h-3.5" strokeWidth={1.5} aria-hidden="true" />
+              <span>Follow</span>
+            </MapControlButton>
           )}
-
-          <button
+          <MapControlButton
+            label="Zoom in"
             onClick={() => {
               if (mapInstanceRef.current) mapInstanceRef.current.zoomIn();
             }}
-            className="p-2 rounded-xl bg-slate-900/80 text-slate-300 border border-slate-700 hover:text-white shadow-lg backdrop-blur-md transition self-end"
-            title="Zoom In"
           >
-            <ZoomIn className="w-4 h-4" />
-          </button>
-          <button
+            <Plus className="w-3.5 h-3.5" strokeWidth={1.5} aria-hidden="true" />
+          </MapControlButton>
+          <MapControlButton
+            label="Zoom out"
             onClick={() => {
               if (mapInstanceRef.current) mapInstanceRef.current.zoomOut();
             }}
-            className="p-2 rounded-xl bg-slate-900/80 text-slate-300 border border-slate-700 hover:text-white shadow-lg backdrop-blur-md transition self-end"
-            title="Zoom Out"
           >
-            <ZoomOut className="w-4 h-4" />
-          </button>
+            <Minus className="w-3.5 h-3.5" strokeWidth={1.5} aria-hidden="true" />
+          </MapControlButton>
         </div>
 
         {/* Map Legend Overlay */}
-        <div className="absolute bottom-4 left-4 z-[400] glass-panel px-3.5 py-2 rounded-xl border border-slate-800 text-[11px] text-slate-400 flex flex-wrap items-center gap-3">
-          <div className="flex items-center gap-1.5">
-            <span className="w-2.5 h-2.5 rounded-full bg-cyan-400 shadow-glow-cyan"></span>
-            <span className="text-slate-200 font-medium">ISS Position</span>
-          </div>
-          <div className="flex items-center gap-1.5">
-            <span className="w-4 h-0.5 border-t border-dashed border-sky-400"></span>
-            <span>Recent Orbital Path</span>
-          </div>
+        <div className="absolute bottom-6 left-4 z-[400] bg-black/85 border border-line px-3 py-2 flex flex-wrap items-center gap-x-4 gap-y-1 font-mono text-[0.625rem] uppercase tracking-label text-fg-muted">
+          <span className="flex items-center gap-2">
+            <span className="w-2 h-2 bg-signal" aria-hidden="true" />
+            ISS
+          </span>
+          <span className="flex items-center gap-2">
+            <span className="w-5 h-px bg-gradient-to-r from-transparent to-signal" aria-hidden="true" />
+            Recent path
+          </span>
+          <span className="flex items-center gap-2">
+            <span className="w-3 h-2 bg-black border border-line-bright" aria-hidden="true" />
+            Night
+          </span>
           {gameMode && (
-            <div className="flex items-center gap-1.5">
-              <span className="w-2.5 h-2.5 rounded-full bg-rose-500 border border-white"></span>
-              <span className="text-rose-300 font-medium">Your Guess Pin</span>
-            </div>
+            <span className="flex items-center gap-2 text-fg">
+              <span className="w-2 h-2 border border-fg" aria-hidden="true" />
+              Your guess
+            </span>
           )}
         </div>
       </div>
+
+      {/* Guess the ISS Location: exercise panel */}
+      <section aria-label="Guess the ISS location game" className="border border-line bg-ink-900">
+        <div className="grid grid-cols-12 gap-6 p-5 sm:p-6 items-center">
+          <div className="col-span-12 md:col-span-7 space-y-2">
+            <div className="flex flex-wrap items-center gap-x-4 gap-y-1">
+              <span className="label text-signal flex items-center gap-2">
+                <Target className="w-3.5 h-3.5" strokeWidth={1.5} aria-hidden="true" />
+                Exercise — Locate the station
+              </span>
+              {highScore > 0 && <span className="label">Best {highScore} pts</span>}
+            </div>
+            <p className="text-sm text-fg-muted leading-relaxed" aria-live="polite">
+              {!gameMode
+                ? 'Hide the tracker marker, click anywhere on the world map to guess where the ISS is orbiting right now, and score points!'
+                : !gameResult
+                ? guessCoords
+                  ? `Pin placed at (${guessCoords.lat}°, ${guessCoords.lng}°). Click "Check My Guess" to reveal the ISS!`
+                  : 'ISS hidden! Click any spot on the world map below to place your guess pin.'
+                : `You were ${gameResult.distanceKm.toLocaleString()} km away from the ISS!`}
+            </p>
+          </div>
+
+          <div className="col-span-12 md:col-span-5 flex flex-wrap md:justify-end items-center gap-2">
+            {!gameMode ? (
+              <Button variant="secondary" size="sm" icon={Target} onClick={startGuessGame}>
+                Play Guess the ISS
+              </Button>
+            ) : (
+              <>
+                {!gameResult && (
+                  <Button size="sm" icon={CheckCircle2} disabled={!guessCoords} onClick={handleCheckGuess}>
+                    Check My Guess
+                  </Button>
+                )}
+                <Button variant="secondary" size="sm" icon={RotateCcw} onClick={startGuessGame}>
+                  {gameResult ? 'Play Again' : 'Reset Pin'}
+                </Button>
+                <Button variant="ghost" size="sm" icon={X} onClick={exitGuessGame}>
+                  Exit Game
+                </Button>
+              </>
+            )}
+          </div>
+        </div>
+
+        {/* Game Score Results */}
+        {gameResult && (
+          <dl className="grid grid-cols-2 lg:grid-cols-4 gap-px bg-line border-t border-line animate-fade-in">
+            <div className="bg-ink-900 p-5">
+              <dt className="label">Your guess</dt>
+              <dd className="mt-2 telemetry text-sm text-fg">
+                {guessCoords.lat}°, {guessCoords.lng}°
+              </dd>
+            </div>
+            <div className="bg-ink-900 p-5">
+              <dt className="label">Actual ISS position</dt>
+              <dd className="mt-2 telemetry text-sm text-fg">
+                {gameResult.actualLat}°, {gameResult.actualLng}°
+              </dd>
+            </div>
+            <div className="bg-ink-900 p-5">
+              <dt className="label">Distance</dt>
+              <dd className="mt-2 telemetry text-2xl text-fg">
+                {gameResult.distanceKm.toLocaleString()}
+                <span className="ml-1 text-[0.6875rem] text-fg-muted">KM</span>
+              </dd>
+            </div>
+            <div className="bg-ink-900 p-5">
+              <dt className="label">Score &amp; rank</dt>
+              <dd className="mt-2 telemetry text-2xl text-signal">
+                {gameResult.score}
+                <span className="ml-1 text-[0.6875rem] text-fg-muted">PTS</span>
+              </dd>
+              <dd className="mt-1 font-mono text-[0.6875rem] uppercase tracking-label text-fg">{gameResult.rank}</dd>
+            </div>
+          </dl>
+        )}
+      </section>
     </div>
   );
 };

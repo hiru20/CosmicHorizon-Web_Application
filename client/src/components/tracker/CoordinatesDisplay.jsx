@@ -1,107 +1,107 @@
 import React from 'react';
-import { Gauge, ArrowUpRight, Compass, Eye, ShieldAlert, Radio } from 'lucide-react';
+import { Pause, Play, RefreshCw } from 'lucide-react';
 import Badge from '../common/Badge';
+import AnimatedNumber from '../common/AnimatedNumber';
+import LiveDot from '../common/LiveDot';
 
+// Stable formatters so AnimatedNumber only re-tweens when the value changes
+const fmtAbs4 = (n) => Math.abs(n).toFixed(4);
+const fmtInt = (n) => Math.round(n).toLocaleString();
+const fmt1 = (n) => n.toFixed(1);
+
+const Row = ({ label, unit, children, hint }) => (
+  <div className="grid grid-cols-[5.5rem_1fr] items-baseline gap-3 py-3.5 border-b border-line">
+    <dt className="label">{label}</dt>
+    <dd className="min-w-0">
+      <div className="telemetry text-xl text-fg leading-none">
+        {children}
+        {unit && <span className="ml-1.5 text-[0.6875rem] tracking-label text-fg-muted">{unit}</span>}
+      </div>
+      {hint && <div className="mt-1.5 font-mono text-[0.625rem] text-fg-muted">{hint}</div>}
+    </dd>
+  </div>
+);
+
+/** Right-hand mono telemetry column for the ISS tracker */
 const CoordinatesDisplay = ({ telemetry, isPolling, onTogglePolling, onRefresh, lastUpdated }) => {
   if (!telemetry) return null;
 
+  const velocity = telemetry.velocity ? telemetry.velocity : null;
+
   return (
-    <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-      {/* Latitude & Longitude */}
-      <div className="glass-panel p-4 rounded-xl border border-slate-800">
-        <div className="flex items-center justify-between text-slate-400 text-xs mb-1">
-          <span className="flex items-center gap-1.5">
-            <Compass className="w-4 h-4 text-cyan-400" />
-            Coordinates
-          </span>
-          <span className="font-mono text-[10px] text-slate-500">WGS84</span>
-        </div>
-        <div className="text-xl font-bold font-mono text-slate-100 tracking-tight">
-          {telemetry.latitude > 0 ? `${telemetry.latitude}° N` : `${Math.abs(telemetry.latitude)}° S`}
-        </div>
-        <div className="text-sm font-mono text-cyan-400 mt-0.5">
-          {telemetry.longitude > 0 ? `${telemetry.longitude}° E` : `${Math.abs(telemetry.longitude)}° W`}
-        </div>
+    <section aria-label="ISS telemetry" className="border border-line bg-ink-900 crosshairs">
+      <div className="flex items-center justify-between gap-4 px-5 h-10 border-b border-line">
+        <span className="label text-fg-muted">T — State vector</span>
+        <LiveDot label={isPolling ? 'Polling 3.5 s' : 'Paused'} active={isPolling} />
       </div>
 
-      {/* Orbital Velocity */}
-      <div className="glass-panel p-4 rounded-xl border border-slate-800">
-        <div className="flex items-center justify-between text-slate-400 text-xs mb-1">
-          <span className="flex items-center gap-1.5">
-            <Gauge className="w-4 h-4 text-sky-400" />
-            Orbital Velocity
-          </span>
-          <span className="text-[10px] text-slate-500">~7.66 km/s</span>
-        </div>
-        <div className="text-xl font-bold font-mono text-slate-100 tracking-tight">
-          {telemetry.velocity ? Math.round(telemetry.velocity).toLocaleString() : '27,600'}{' '}
-          <span className="text-xs font-normal text-slate-400">km/h</span>
-        </div>
-        <div className="text-xs text-slate-400 mt-1">
-          Mach {(telemetry.velocity / 1234.8).toFixed(1)} (22x sound speed)
-        </div>
+      {/* Key number: ground speed */}
+      <div className="px-5 pt-6 pb-5 border-b border-line">
+        <span className="label">Velocity</span>
+        <p className="mt-3 telemetry text-5xl leading-none text-signal">
+          {velocity ? <AnimatedNumber value={velocity} format={fmtInt} /> : '27,600'}
+          <span className="ml-2 text-xs tracking-label text-fg-muted">KM/H</span>
+        </p>
+        <p className="mt-2 font-mono text-[0.6875rem] text-fg-muted">
+          Mach {(telemetry.velocity / 1234.8).toFixed(1)} · ~7.66 km/s
+        </p>
       </div>
 
-      {/* Orbital Altitude */}
-      <div className="glass-panel p-4 rounded-xl border border-slate-800">
-        <div className="flex items-center justify-between text-slate-400 text-xs mb-1">
-          <span className="flex items-center gap-1.5">
-            <ArrowUpRight className="w-4 h-4 text-indigo-400" />
-            Altitude
-          </span>
-          <span className="text-[10px] text-slate-500">LEO</span>
+      <dl className="px-5">
+        <Row label="LAT" unit={telemetry.latitude > 0 ? '° N' : '° S'}>
+          <AnimatedNumber value={telemetry.latitude} format={fmtAbs4} />
+        </Row>
+        <Row label="LON" unit={telemetry.longitude > 0 ? '° E' : '° W'}>
+          <AnimatedNumber value={telemetry.longitude} format={fmtAbs4} />
+        </Row>
+        <Row label="ALT" unit="KM" hint="Low Earth orbit">
+          {telemetry.altitude ? <AnimatedNumber value={telemetry.altitude} format={fmt1} /> : '420.0'}
+        </Row>
+        <Row label="Footprint" unit="KM">
+          ~{telemetry.footprint ? Math.round(telemetry.footprint).toLocaleString() : '4,500'}
+        </Row>
+        <div className="grid grid-cols-[5.5rem_1fr] items-center gap-3 py-3.5 border-b border-line">
+          <dt className="label">Lighting</dt>
+          <dd>
+            <Badge variant={telemetry.visibility === 'daylight' ? 'neutral' : 'dashed'}>{telemetry.visibility || 'Daylight'}</Badge>
+          </dd>
         </div>
-        <div className="text-xl font-bold font-mono text-slate-100 tracking-tight">
-          {telemetry.altitude ? telemetry.altitude.toFixed(1) : '420.0'}{' '}
-          <span className="text-xs font-normal text-slate-400">km</span>
+        <div className="grid grid-cols-[5.5rem_1fr] items-baseline gap-3 py-3.5">
+          <dt className="label">Timestamp</dt>
+          <dd className="font-mono text-xs text-fg tabular-nums">
+            {lastUpdated ? (
+              <>
+                {lastUpdated.toLocaleTimeString()}
+                <span className="block mt-1 text-[0.625rem] text-fg-muted">{lastUpdated.toISOString().replace('T', ' ').slice(0, 19)} UTC</span>
+              </>
+            ) : (
+              '—'
+            )}
+          </dd>
         </div>
-        <div className="text-xs text-slate-400 mt-1">
-          Ground Footprint: ~{telemetry.footprint ? Math.round(telemetry.footprint) : '4,500'} km
-        </div>
+      </dl>
+
+      <div className="grid grid-cols-2 border-t border-line">
+        <button
+          type="button"
+          onClick={onTogglePolling}
+          aria-pressed={!isPolling}
+          className="h-12 flex items-center justify-center gap-2 font-mono text-[0.6875rem] uppercase tracking-label text-fg-muted hover:text-fg hover:bg-ink-800 transition-colors border-r border-line"
+        >
+          {isPolling ? <Pause className="w-3.5 h-3.5" strokeWidth={1.5} aria-hidden="true" /> : <Play className="w-3.5 h-3.5" strokeWidth={1.5} aria-hidden="true" />}
+          {isPolling ? 'Pause' : 'Resume'}
+        </button>
+        <button
+          type="button"
+          onClick={onRefresh}
+          title="Fetch latest position"
+          className="h-12 flex items-center justify-center gap-2 font-mono text-[0.6875rem] uppercase tracking-label text-fg-muted hover:text-fg hover:bg-ink-800 transition-colors"
+        >
+          <RefreshCw className="w-3.5 h-3.5" strokeWidth={1.5} aria-hidden="true" />
+          Refresh
+        </button>
       </div>
-
-      {/* Visibility & Status */}
-      <div className="glass-panel p-4 rounded-xl border border-slate-800 flex flex-col justify-between">
-        <div className="flex items-center justify-between text-slate-400 text-xs mb-1">
-          <span className="flex items-center gap-1.5">
-            <Eye className="w-4 h-4 text-emerald-400" />
-            Orbital Lighting
-          </span>
-          <Badge variant={telemetry.visibility === 'daylight' ? 'go' : 'purple'}>
-            {telemetry.visibility || 'Daylight'}
-          </Badge>
-        </div>
-
-        <div className="flex items-center justify-between mt-2 pt-2 border-t border-slate-800/80">
-          <div className="flex items-center gap-1.5 text-xs text-slate-400">
-            <span
-              className={`w-2 h-2 rounded-full ${
-                isPolling ? 'bg-emerald-400 animate-ping' : 'bg-amber-400'
-              }`}
-            />
-            <span className="font-mono text-[11px]">
-              {isPolling ? 'Auto Polling (3s)' : 'Paused'}
-            </span>
-          </div>
-
-          <div className="flex items-center gap-1">
-            <button
-              onClick={onTogglePolling}
-              className="px-2 py-1 text-xs rounded border border-slate-700 hover:border-cyan-500 text-slate-300 hover:text-white transition"
-            >
-              {isPolling ? 'Pause' : 'Resume'}
-            </button>
-            <button
-              onClick={onRefresh}
-              className="px-2 py-1 text-xs rounded bg-cyan-500/20 text-cyan-300 border border-cyan-500/30 hover:bg-cyan-500/30 transition"
-              title="Fetch latest position"
-            >
-              Refresh
-            </button>
-          </div>
-        </div>
-      </div>
-    </div>
+    </section>
   );
 };
 

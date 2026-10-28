@@ -1,87 +1,86 @@
 import React from 'react';
-import { Orbit, Heart, Globe2, Radio } from 'lucide-react';
+import { Link } from 'react-router-dom';
+import LiveDot from '../common/LiveDot';
 
+const MODULE_LINKS = [
+  { index: '01', to: '/tracker', label: 'ISS orbital map' },
+  { index: '02', to: '/nasa', label: 'NASA gallery' },
+  { index: '03', to: '/launches', label: 'Launch manifest' },
+  { index: '04', to: '/nasa#neo', label: 'Near-Earth objects' },
+  { index: '05', to: '/dashboard', label: 'Mission log' },
+];
+
+const CREDITS = [
+  { source: 'NASA Open APIs', use: 'APOD · Mars Rover Photos · NeoWs', href: 'https://api.nasa.gov/' },
+  { source: 'Launch Library 2', use: 'The Space Devs launch manifest', href: 'https://thespacedevs.com/llapi' },
+  { source: 'WhereTheISS.at', use: 'ISS state vector · NORAD 25544', href: 'https://wheretheiss.at/' },
+  { source: 'NASA Visible Earth', use: 'Blue Marble · Black Marble textures', href: 'https://visibleearth.nasa.gov/' },
+  { source: 'CARTO · OpenStreetMap · Esri', use: 'Map tiles', href: 'https://www.openstreetmap.org/copyright' },
+];
+
+/** Colophon-style footer: credits, coordinates, version. */
 const Footer = () => {
   return (
-    <footer className="w-full border-t border-slate-800/80 bg-space-darkest/90 mt-20">
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-10">
-        <div className="grid grid-cols-1 md:grid-cols-4 gap-8 mb-8">
-          {/* Brand Info */}
-          <div className="md:col-span-2 space-y-3">
-            <div className="flex items-center gap-2">
-              <div className="w-8 h-8 rounded-lg bg-gradient-to-tr from-cyan-500 to-indigo-600 flex items-center justify-center">
-                <Orbit className="w-5 h-5 text-white" />
-              </div>
-              <span className="text-base font-bold tracking-wider text-slate-100">
-                COSMICHORIZON
-              </span>
-            </div>
-            <p className="text-sm text-slate-400 max-w-md leading-relaxed">
-              Interactive space exploration and orbital telemetry platform providing real-time satellite tracking, global launch schedules, and deep-space observatory archives.
-            </p>
-            <div className="flex items-center gap-2 text-xs text-emerald-400 font-mono">
-              <span className="w-2 h-2 rounded-full bg-emerald-400 animate-ping"></span>
-              <Radio className="w-3.5 h-3.5" />
-              <span>Telemetry Gateway: Online & Polling</span>
-            </div>
-          </div>
-
-          {/* Quick Links */}
-          <div>
-            <h4 className="text-xs font-semibold text-slate-300 uppercase tracking-wider mb-3">
-              Exploration Modules
-            </h4>
-            <ul className="space-y-2 text-sm text-slate-400">
-              <li>
-                <a href="/tracker" className="hover:text-cyan-400 transition">
-                  Live ISS Orbital Map
-                </a>
-              </li>
-              <li>
-                <a href="/launches" className="hover:text-cyan-400 transition">
-                  Global Rocket Launches
-                </a>
-              </li>
-              <li>
-                <a href="/nasa" className="hover:text-cyan-400 transition">
-                  NASA APOD & Mars Rovers
-                </a>
-              </li>
-              <li>
-                <a href="/dashboard" className="hover:text-cyan-400 transition">
-                  Mission Watchlist & Bookmarks
-                </a>
-              </li>
-            </ul>
-          </div>
-
-          {/* Academic & Data Credits */}
-          <div>
-            <h4 className="text-xs font-semibold text-slate-300 uppercase tracking-wider mb-3">
-              API & Science Data
-            </h4>
-            <ul className="space-y-2 text-sm text-slate-400">
-              <li className="flex items-center gap-1.5">
-                <Globe2 className="w-3.5 h-3.5 text-cyan-400" />
-                <span>NASA Open APIs (APOD, Mars, NEO)</span>
-              </li>
-              <li className="flex items-center gap-1.5">
-                <Globe2 className="w-3.5 h-3.5 text-cyan-400" />
-                <span>Launch Library 2 (The Space Devs)</span>
-              </li>
-              <li className="flex items-center gap-1.5">
-                <Globe2 className="w-3.5 h-3.5 text-cyan-400" />
-                <span>WhereTheISS.at / NORAD #25544</span>
-              </li>
-            </ul>
+    <footer className="relative mt-32 border-t border-line bg-ink">
+      <div className="max-w-shell mx-auto px-4 sm:px-6 lg:px-10">
+        {/* Oversized sign-off */}
+        <div className="py-14 sm:py-20 border-b border-line grid grid-cols-12 gap-6 items-end">
+          <p className="col-span-12 lg:col-span-8 font-display text-display-md text-fg">
+            Recorded from low Earth orbit, <span className="italic text-fg-muted">every 3.5 seconds.</span>
+          </p>
+          <div className="col-span-12 lg:col-span-4 lg:text-right">
+            <LiveDot label="Telemetry gateway nominal" />
           </div>
         </div>
 
-        <div className="pt-8 border-t border-slate-800/60 flex flex-col sm:flex-row items-center justify-between text-xs text-slate-500 gap-4">
-          <p>© {new Date().getFullYear()} CosmicHorizon. All rights reserved.</p>
-          <p className="flex items-center gap-1">
-            Powered by NASA Open Data, Launch Library 2 &amp; Orbital Telemetry Networks
-          </p>
+        <div className="grid grid-cols-12 gap-x-6 gap-y-10 py-12">
+          <nav aria-label="Modules" className="col-span-12 sm:col-span-6 lg:col-span-3">
+            <h2 className="label text-fg-faint mb-5">Modules</h2>
+            <ul className="space-y-2.5">
+              {MODULE_LINKS.map((l) => (
+                <li key={l.index}>
+                  <Link to={l.to} className="group inline-flex items-baseline gap-3 text-sm text-fg-muted hover:text-fg transition-colors">
+                    <span className="font-mono text-[0.625rem] text-fg-faint group-hover:text-signal">{l.index}</span>
+                    <span className="link-sweep">{l.label}</span>
+                  </Link>
+                </li>
+              ))}
+            </ul>
+          </nav>
+
+          <div className="col-span-12 sm:col-span-6 lg:col-span-5">
+            <h2 className="label text-fg-faint mb-5">Data sources</h2>
+            <dl className="divide-y divide-line border-y border-line">
+              {CREDITS.map((c) => (
+                <div key={c.source} className="grid grid-cols-[1fr_auto] sm:grid-cols-[11rem_1fr] gap-x-4 py-2.5">
+                  <dt>
+                    <a href={c.href} target="_blank" rel="noopener noreferrer" className="link-sweep text-sm text-fg">
+                      {c.source}
+                      <span className="sr-only"> (opens in a new tab)</span>
+                    </a>
+                  </dt>
+                  <dd className="font-mono text-[0.6875rem] text-fg-muted sm:self-center text-right sm:text-left">{c.use}</dd>
+                </div>
+              ))}
+            </dl>
+          </div>
+
+          <div className="col-span-12 lg:col-span-4 lg:pl-10 lg:border-l border-line">
+            <h2 className="label text-fg-faint mb-5">Colophon</h2>
+            <dl className="grid grid-cols-[6rem_1fr] gap-y-2 font-mono text-[0.6875rem]">
+              <dt className="text-fg-faint uppercase tracking-label">Ground stn</dt>
+              <dd className="text-fg-muted">51.5072° N, 0.1276° W</dd>
+              <dt className="text-fg-faint uppercase tracking-label">Build</dt>
+              <dd className="text-fg-muted">v2.0.0 — flight recorder</dd>
+              <dt className="text-fg-faint uppercase tracking-label">Type</dt>
+              <dd className="text-fg-muted">Instrument Serif, Inter, JetBrains Mono</dd>
+            </dl>
+          </div>
+        </div>
+
+        <div className="py-6 border-t border-line flex flex-col sm:flex-row justify-between gap-2 font-mono text-[0.625rem] uppercase tracking-label text-fg-faint">
+          <p>© {new Date().getFullYear()} CosmicHorizon</p>
+          <p>End of transmission</p>
         </div>
       </div>
     </footer>

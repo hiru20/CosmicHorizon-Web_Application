@@ -3,7 +3,10 @@ import { Link } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { authService } from '../services/authService';
 import { useNotification } from '../context/NotificationContext';
-import { Orbit, UserPlus, Lock, Mail, User, MailCheck, CheckCircle2 } from 'lucide-react';
+import { ArrowRight } from 'lucide-react';
+import AuthShell, { StepLabel, ErrorBar, PasswordToggle } from '../components/auth/AuthShell';
+import Input from '../components/common/Input';
+import Button from '../components/common/Button';
 
 const RegisterPage = () => {
   const [name, setName] = useState('');
@@ -12,6 +15,7 @@ const RegisterPage = () => {
   const [confirmPassword, setConfirmPassword] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [errorMsg, setErrorMsg] = useState('');
+  const [showPassword, setShowPassword] = useState(false); // UI only
 
   // Inline per-field validation errors
   const [fieldErrors, setFieldErrors] = useState({});
@@ -121,183 +125,174 @@ const RegisterPage = () => {
   // After sign-up: ask the user to verify their email via 6-digit code OR email link
   if (registered) {
     return (
-      <div className="min-h-[80vh] flex items-center justify-center px-4 py-12">
-        <div className="w-full max-w-md glass-panel p-8 rounded-3xl border border-slate-800 shadow-2xl text-center space-y-5">
-          <div className="w-12 h-12 rounded-2xl bg-cyan-500/15 border border-cyan-500/30 flex items-center justify-center mx-auto">
-            <MailCheck className="w-7 h-7 text-cyan-400" />
+      <AuthShell
+        code="AUTH / 02 — Verify"
+        statement={
+          <>
+            Check your <span className="italic text-fg-muted">inbox.</span>
+          </>
+        }
+        mobileStatement={
+          <>
+            Check your
+            <br />
+            <span className="italic text-fg-muted">inbox.</span>
+          </>
+        }
+        standfirst="One step left. Your account is created but stays locked until the email address is confirmed."
+      >
+        <div className="w-full max-w-md mx-auto lg:mx-0 space-y-8">
+          <div>
+            <StepLabel index="02">Verification</StepLabel>
+            <p className="text-sm text-fg-muted leading-relaxed">
+              We sent a verification email to <span className="text-fg">{registered.email}</span>. Enter the 6-digit code from
+              that email below, or press the verification button inside it.
+            </p>
           </div>
-          <h2 className="text-2xl font-black text-white">Verify Your Email</h2>
-          <p className="text-xs text-slate-400 leading-relaxed">
-            We sent a verification email to{' '}
-            <span className="text-slate-200 font-bold">{registered.email}</span>. Enter the{' '}
-            <b className="text-cyan-300">6-digit verification code</b> from your email below, or click the verification button inside the email.
-          </p>
 
-          <form onSubmit={handleVerifyCode} className="space-y-3 pt-1">
-            <input
-              type="text"
-              inputMode="numeric"
-              maxLength={6}
-              value={otpCode}
-              onChange={(e) => setOtpCode(e.target.value.replace(/\D/g, ''))}
-              placeholder="000000"
-              className="w-full text-center tracking-[0.5em] font-mono text-xl font-bold py-3 rounded-xl bg-slate-900 border border-slate-700 text-cyan-300 placeholder-slate-600 focus:outline-none focus:border-cyan-500"
-            />
-            <button
+          <form onSubmit={handleVerifyCode} className="space-y-8 border-t border-line pt-8">
+            <div>
+              <label htmlFor="register-otp" className="label block mb-1">
+                Verification code
+              </label>
+              <input
+                id="register-otp"
+                name="otp"
+                autoComplete="one-time-code"
+                type="text"
+                inputMode="numeric"
+                maxLength={6}
+                value={otpCode}
+                onChange={(e) => setOtpCode(e.target.value.replace(/\D/g, ''))}
+                placeholder="000000"
+                className="field font-mono text-3xl sm:text-4xl text-fg tracking-[0.5em] placeholder-fg-faint py-3"
+              />
+            </div>
+            <Button
               type="submit"
+              size="lg"
               disabled={isVerifyingCode || otpCode.length < 6}
-              className="w-full py-3 rounded-xl bg-gradient-to-r from-cyan-500 to-indigo-600 text-white font-bold text-sm shadow-glow-cyan hover:opacity-95 transition disabled:opacity-50 flex items-center justify-center gap-2"
+              loading={isVerifyingCode}
+              iconRight={ArrowRight}
+              className="w-full justify-between"
             >
-              <CheckCircle2 className="w-4 h-4" />
-              <span>{isVerifyingCode ? 'Verifying...' : 'Verify & Activate Account'}</span>
-            </button>
+              {isVerifyingCode ? 'Verifying...' : 'Verify & activate account'}
+            </Button>
           </form>
 
-          <div className="flex flex-col gap-2 pt-3 border-t border-slate-800">
-            <button
-              type="button"
-              onClick={handleResend}
-              disabled={isResending}
-              className="px-4 py-2 rounded-xl text-xs font-semibold border border-slate-700 text-slate-300 hover:text-white disabled:opacity-50"
-            >
+          <div className="border-t border-line pt-6 flex flex-wrap items-center justify-between gap-4">
+            <Button variant="link" onClick={handleResend} disabled={isResending} className="text-fg-muted">
               {isResending ? 'Sending...' : 'Resend verification email'}
-            </button>
-            <Link to="/login" className="text-xs text-cyan-400 font-bold hover:underline pt-1">
+            </Button>
+            <Link to="/login" className="link-sweep font-mono text-label uppercase text-fg hover:text-signal">
               Already verified? Sign in
             </Link>
           </div>
         </div>
-      </div>
+      </AuthShell>
     );
   }
 
   return (
-    <div className="min-h-[80vh] flex items-center justify-center px-4 py-12">
-      <div className="w-full max-w-md glass-panel p-8 rounded-3xl border border-slate-800 shadow-2xl relative overflow-hidden">
-        {/* Glow accents */}
-        <div className="absolute -top-16 -right-16 w-32 h-32 bg-cyan-500/10 rounded-full blur-3xl pointer-events-none" />
-        <div className="absolute -bottom-16 -left-16 w-32 h-32 bg-indigo-500/10 rounded-full blur-3xl pointer-events-none" />
+    <AuthShell
+      code="AUTH / 01 — Register"
+      statement={
+        <>
+          Join the crew <span className="italic text-fg-muted">manifest.</span>
+        </>
+      }
+      mobileStatement={
+        <>
+          Join the crew
+          <br />
+          <span className="italic text-fg-muted">manifest.</span>
+        </>
+      }
+      standfirst="An account keeps a log of what you find: favourite imagery, launches you are watching, and notes against each."
+    >
+      <div className="w-full max-w-md mx-auto lg:mx-0 space-y-8">
+        {errorMsg && <ErrorBar className="animate-slide-up">{errorMsg}</ErrorBar>}
 
-        <div className="text-center space-y-2 mb-8">
-          <div className="w-12 h-12 rounded-2xl bg-gradient-to-tr from-cyan-500 to-indigo-600 flex items-center justify-center mx-auto shadow-glow-cyan">
-            <Orbit className="w-7 h-7 text-white" />
-          </div>
-          <h2 className="text-2xl font-black text-white tracking-tight">Create Astronaut Account</h2>
-          <p className="text-xs text-slate-400">
-            Join CosmicHorizon to save space missions, track satellites, and customize your dashboard
-          </p>
-        </div>
-
-        {errorMsg && (
-          <div className="mb-6 p-3 rounded-xl bg-rose-500/15 border border-rose-500/30 text-rose-300 text-xs text-center">
-            {errorMsg}
-          </div>
-        )}
-
-        <form onSubmit={handleSubmit} className="space-y-4" noValidate>
-          {/* Full Name */}
-          <div className="space-y-1">
-            <label className="text-xs font-semibold text-slate-300">Astronaut Call Sign / Name</label>
-            <div className="relative">
-              <User className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
-              <input
+        <form onSubmit={handleSubmit} noValidate className="space-y-10">
+          <fieldset>
+            <legend className="w-full">
+              <StepLabel index="01">Identity</StepLabel>
+            </legend>
+            <div className="space-y-7">
+              <Input
+                label="Call sign / name"
+                id="register-name"
+                name="name"
                 type="text"
+                autoComplete="name"
                 value={name}
                 onChange={(e) => setName(e.target.value)}
                 onBlur={(e) => handleBlur('name', e.target.value)}
                 placeholder="Commander John Doe"
-                className={`w-full pl-10 pr-4 py-2.5 rounded-xl bg-slate-900/90 border text-sm text-slate-100 placeholder-slate-500 focus:outline-none transition ${
-                  fieldErrors.name ? 'border-rose-500 focus:border-rose-400' : 'border-slate-700 focus:border-cyan-500'
-                }`}
+                error={fieldErrors.name}
               />
-            </div>
-            {fieldErrors.name && <p className="text-[11px] text-rose-400 mt-0.5">{fieldErrors.name}</p>}
-          </div>
-
-          {/* Email */}
-          <div className="space-y-1">
-            <label className="text-xs font-semibold text-slate-300">Email Address</label>
-            <div className="relative">
-              <Mail className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
-              <input
+              <Input
+                label="Email address"
+                id="register-email"
+                name="email"
                 type="email"
+                autoComplete="email"
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
                 onBlur={(e) => handleBlur('email', e.target.value)}
                 placeholder="pilot@mission.org"
-                className={`w-full pl-10 pr-4 py-2.5 rounded-xl bg-slate-900/90 border text-sm text-slate-100 placeholder-slate-500 focus:outline-none transition ${
-                  fieldErrors.email ? 'border-rose-500 focus:border-rose-400' : 'border-slate-700 focus:border-cyan-500'
-                }`}
+                error={fieldErrors.email}
               />
             </div>
-            {fieldErrors.email && <p className="text-[11px] text-rose-400 mt-0.5">{fieldErrors.email}</p>}
-          </div>
+          </fieldset>
 
-          {/* Password */}
-          <div className="space-y-1">
-            <label className="text-xs font-semibold text-slate-300">Security Password (min 6 characters)</label>
-            <div className="relative">
-              <Lock className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
-              <input
-                type="password"
+          <fieldset>
+            <legend className="w-full">
+              <StepLabel index="02">Security</StepLabel>
+            </legend>
+            <div className="space-y-7">
+              <Input
+                label="Password"
+                hint="Minimum 6 characters"
+                id="register-password"
+                name="password"
+                type={showPassword ? 'text' : 'password'}
+                autoComplete="new-password"
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
                 onBlur={(e) => handleBlur('password', e.target.value)}
                 placeholder="••••••••"
-                className={`w-full pl-10 pr-4 py-2.5 rounded-xl bg-slate-900/90 border text-sm text-slate-100 placeholder-slate-500 focus:outline-none transition ${
-                  fieldErrors.password ? 'border-rose-500 focus:border-rose-400' : 'border-slate-700 focus:border-cyan-500'
-                }`}
+                error={fieldErrors.password}
+                rightSlot={<PasswordToggle shown={showPassword} onToggle={() => setShowPassword((s) => !s)} controls="register-password register-confirm" />}
               />
-            </div>
-            {fieldErrors.password && <p className="text-[11px] text-rose-400 mt-0.5">{fieldErrors.password}</p>}
-          </div>
-
-          {/* Confirm Password */}
-          <div className="space-y-1">
-            <label className="text-xs font-semibold text-slate-300">Confirm Password</label>
-            <div className="relative">
-              <Lock className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
-              <input
-                type="password"
+              <Input
+                label="Confirm password"
+                id="register-confirm"
+                name="confirmPassword"
+                type={showPassword ? 'text' : 'password'}
+                autoComplete="new-password"
                 value={confirmPassword}
                 onChange={(e) => setConfirmPassword(e.target.value)}
                 onBlur={(e) => handleBlur('confirmPassword', e.target.value)}
                 placeholder="••••••••"
-                className={`w-full pl-10 pr-4 py-2.5 rounded-xl bg-slate-900/90 border text-sm text-slate-100 placeholder-slate-500 focus:outline-none transition ${
-                  fieldErrors.confirmPassword ? 'border-rose-500 focus:border-rose-400' : 'border-slate-700 focus:border-cyan-500'
-                }`}
+                error={fieldErrors.confirmPassword}
               />
             </div>
-            {fieldErrors.confirmPassword && (
-              <p className="text-[11px] text-rose-400 mt-0.5">{fieldErrors.confirmPassword}</p>
-            )}
-          </div>
+          </fieldset>
 
-          {/* Submit */}
-          <button
-            type="submit"
-            disabled={isSubmitting}
-            className="w-full mt-2 py-3 rounded-xl bg-gradient-to-r from-cyan-500 to-indigo-600 text-white font-bold text-sm shadow-glow-cyan hover:opacity-95 transition disabled:opacity-50 flex items-center justify-center gap-2"
-          >
-            {isSubmitting ? (
-              <span>Creating Astronaut Credentials...</span>
-            ) : (
-              <>
-                <UserPlus className="w-4 h-4" />
-                <span>Complete Registration</span>
-              </>
-            )}
-          </button>
+          <Button type="submit" size="lg" loading={isSubmitting} iconRight={ArrowRight} className="w-full justify-between">
+            {isSubmitting ? 'Creating credentials...' : 'Complete registration'}
+          </Button>
         </form>
 
-        <div className="mt-6 pt-5 border-t border-slate-800 text-center">
-          <p className="text-xs text-slate-400">
-            Already have an account?{' '}
-            <Link to="/login" className="text-cyan-400 font-bold hover:underline">Sign in here</Link>
-          </p>
-        </div>
+        <p className="border-t border-line pt-6 font-mono text-label uppercase text-fg-faint">
+          Already have an account?{' '}
+          <Link to="/login" className="link-sweep text-fg hover:text-signal">
+            Sign in
+          </Link>
+        </p>
       </div>
-    </div>
+    </AuthShell>
   );
 };
 
