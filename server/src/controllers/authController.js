@@ -5,6 +5,9 @@ import { successResponse, errorResponse } from '../utils/responseHandler.js';
 import { sendVerificationEmail } from '../services/emailService.js';
 
 const VERIFICATION_HOURS = 24;
+const MAX_CODE_ATTEMPTS = 5; // wrong 6-digit codes allowed before a new code is required
+const RESEND_COOLDOWN_MS = 60 * 1000;
+const EMAIL_PATTERN = /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/; // matches the client form and User model
 
 const hashToken = (token) => crypto.createHash('sha256').update(token).digest('hex');
 
@@ -18,6 +21,7 @@ const issueVerification = async (user) => {
   user.verificationToken = hashToken(rawToken);
   user.verificationCode = hashToken(otpCode);
   user.verificationExpires = new Date(Date.now() + VERIFICATION_HOURS * 60 * 60 * 1000);
+  user.verificationAttempts = 0;
   await user.save();
 
   const clientUrl = (process.env.CLIENT_URL || 'http://localhost:5173').replace(/\/$/, '');
@@ -39,8 +43,17 @@ export const registerUser = async (req, res, next) => {
   try {
     const { name, email, password } = req.body;
 
-    if (!name || !email || !password) {
+    if (typeof name !== 'string' || typeof email !== 'string' || typeof password !== 'string') {
       return errorResponse(res, 'Please provide name, email, and password', 400);
+    }
+    if (!name.trim() || !email.trim() || !password) {
+      return errorResponse(res, 'Please provide name, email, and password', 400);
+    }
+    if (name.trim().length > 50) {
+      return errorResponse(res, 'Name cannot exceed 50 characters', 400);
+    }
+    if (!EMAIL_PATTERN.test(email.trim())) {
+      return errorResponse(res, 'Please provide a valid email address', 400);
     }
 
     if (password.length < 6) {
@@ -48,15 +61,15 @@ export const registerUser = async (req, res, next) => {
     }
 
     // Check if user already exists
-    const userExists = await User.findOne({ email: email.toLowerCase() });
+    const userExists = await User.findOne({ email: email.trim().toLowerCase() });
     if (userExists) {
       return errorResponse(res, 'An account with this email already exists', 409);
     }
 
     // Create user (unverified until the email link is opened)
     const user = await User.create({
-      name,
-      email: email.toLowerCase(),
+      name: name.trim(),
+      email: email.trim().toLowerCase(),
       password,
       isVerified: false,
     });
@@ -107,6 +120,7 @@ export const verifyEmail = async (req, res, next) => {
     user.verificationToken = undefined;
     user.verificationCode = undefined;
     user.verificationExpires = undefined;
+    user.verificationAttempts = undefined;
     await user.save();
 
     const token = generateToken(user._id);
@@ -144,13 +158,23 @@ export const verifyEmailCode = async (req, res, next) => {
       return errorResponse(res, 'Please provide both email and 6-digit verification code', 400);
     }
 
+    // Look up the pending verification by email first, so wrong guesses can be counted
     const user = await User.findOne({
-      email: email.toLowerCase().trim(),
-      verificationCode: hashToken(String(code).trim()),
+      email: String(email).toLowerCase().trim(),
       verificationExpires: { $gt: new Date() },
-    }).select('+verificationCode +verificationExpires');
+    }).select('+verificationCode +verificationExpires +verificationAttempts');
 
-    if (!user) {
+    if (!user || !user.verificationCode) {
+      return errorResponse(res, 'Invalid or expired verification code', 400);
+    }
+
+    if ((user.verificationAttempts || 0) >= MAX_CODE_ATTEMPTS) {
+      return errorResponse(res, 'Too many incorrect codes. Please request a new verification email.', 429);
+    }
+
+    if (user.verificationCode !== hashToken(String(code).trim())) {
+      user.verificationAttempts = (user.verificationAttempts || 0) + 1;
+      await user.save();
       return errorResponse(res, 'Invalid or expired verification code', 400);
     }
 
@@ -158,6 +182,7 @@ export const verifyEmailCode = async (req, res, next) => {
     user.verificationToken = undefined;
     user.verificationCode = undefined;
     user.verificationExpires = undefined;
+    user.verificationAttempts = undefined;
     await user.save();
 
     const token = generateToken(user._id);
@@ -195,11 +220,17 @@ export const resendVerification = async (req, res, next) => {
       return errorResponse(res, 'Please provide your email', 400);
     }
 
-    const user = await User.findOne({ email: email.toLowerCase() });
+    const user = await User.findOne({ email: String(email).toLowerCase().trim() }).select('+verificationExpires');
+
+    // A code issued under a minute ago is still fresh: don't email again (stops inbox spam)
+    const issuedAt = user?.verificationExpires
+      ? user.verificationExpires.getTime() - VERIFICATION_HOURS * 60 * 60 * 1000
+      : 0;
+    const inCooldown = Date.now() - issuedAt < RESEND_COOLDOWN_MS;
 
     // Same response whether or not the account exists (no account enumeration)
     const data = {};
-    if (user && user.isVerified === false) {
+    if (user && user.isVerified === false && !inCooldown) {
       try {
         const result = await issueVerification(user);
         if (result.devLink && process.env.NODE_ENV !== 'production') {
@@ -225,7 +256,7 @@ export const loginUser = async (req, res, next) => {
   try {
     const { email, password } = req.body;
 
-    if (!email || !password) {
+    if (typeof email !== 'string' || typeof password !== 'string' || !email.trim() || !password) {
       return errorResponse(res, 'Please provide email and password', 400);
     }
 

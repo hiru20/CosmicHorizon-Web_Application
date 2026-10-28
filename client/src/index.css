@@ -3,45 +3,344 @@
 @tailwind utilities;
 
 @layer base {
+  html {
+    color-scheme: dark;
+    -webkit-text-size-adjust: 100%;
+  }
+
+  /*
+   * Deep-space backdrop: black-blue base, layered blue light.
+   *  - royal-blue nebula top-left, pale sky-blue haze top-right
+   *  - cobalt glow drifting in from the left edge
+   *  - a wide blue "atmosphere" horizon rising from the bottom
+   *  - one faint diagonal sheen for depth
+   */
   body {
-    @apply bg-space-darkest text-slate-100 font-sans min-h-screen antialiased selection:bg-cyan-500 selection:text-black;
-    background-image: 
-      radial-gradient(at 0% 0%, rgba(56, 189, 248, 0.08) 0px, transparent 50%),
-      radial-gradient(at 100% 0%, rgba(129, 140, 248, 0.08) 0px, transparent 50%),
-      radial-gradient(at 50% 100%, rgba(6, 182, 212, 0.05) 0px, transparent 50%);
+    @apply bg-ink text-fg font-sans min-h-screen antialiased;
+    font-feature-settings: 'ss01', 'cv11';
+    background-color: #040915;
+    background-image:
+      radial-gradient(ellipse 60% 50% at 8% -8%, rgba(29, 78, 216, 0.38), transparent 70%),
+      radial-gradient(ellipse 42% 38% at 92% 6%, rgba(56, 189, 248, 0.16), transparent 70%),
+      radial-gradient(ellipse 45% 50% at -8% 58%, rgba(30, 64, 175, 0.26), transparent 70%),
+      radial-gradient(ellipse 40% 35% at 104% 62%, rgba(59, 130, 246, 0.12), transparent 70%),
+      radial-gradient(ellipse 95% 45% at 50% 118%, rgba(37, 99, 235, 0.34), transparent 72%),
+      linear-gradient(115deg, transparent 38%, rgba(147, 197, 253, 0.035) 50%, transparent 62%),
+      linear-gradient(180deg, #071029 0%, #040915 42%, #02050d 100%);
     background-attachment: fixed;
+  }
+
+  /* Faint blue survey grid, fading out toward the edges */
+  body::before {
+    content: '';
+    position: fixed;
+    inset: 0;
+    z-index: -20;
+    pointer-events: none;
+    background-image:
+      linear-gradient(to right, rgba(96, 165, 250, 0.05) 1px, transparent 1px),
+      linear-gradient(to bottom, rgba(96, 165, 250, 0.05) 1px, transparent 1px);
+    background-size: 72px 72px;
+    mask-image: radial-gradient(ellipse 75% 65% at 50% 35%, black 20%, transparent 80%);
+    -webkit-mask-image: radial-gradient(ellipse 75% 65% at 50% 35%, black 20%, transparent 80%);
+  }
+
+  ::selection {
+    background: #3b82f6;
+    color: #ffffff;
+  }
+
+  /* Accent focus ring everywhere */
+  :focus-visible {
+    outline: 2px solid #ffa066;
+    outline-offset: 3px;
+  }
+
+  input[type='date']::-webkit-calendar-picker-indicator {
+    filter: invert(0.6);
+    cursor: pointer;
+  }
+
+  input[type='number']::-webkit-inner-spin-button {
+    opacity: 0.4;
+  }
+
+  select option {
+    background: #0a1428;
+    color: #eef4ff;
   }
 }
 
-/* Custom dark scrollbar */
+@layer components {
+  /* Tiny uppercase mono caption: LAT / LON / ALT */
+  .label {
+    @apply font-mono text-label uppercase text-fg-muted;
+  }
+
+  .telemetry {
+    @apply font-mono tabular-nums;
+  }
+
+  /* Blue surface: a light top-to-bottom blue gradient, slightly translucent so the
+     backdrop's blue light reads through, with a thin highlight on the top edge */
+  .surface {
+    background-image: linear-gradient(180deg, rgba(17, 33, 66, 0.82) 0%, rgba(9, 18, 38, 0.82) 100%);
+    backdrop-filter: blur(6px);
+    -webkit-backdrop-filter: blur(6px);
+    box-shadow: inset 0 1px 0 rgba(147, 197, 253, 0.07);
+  }
+  .surface-raised {
+    background-image: linear-gradient(180deg, rgba(24, 45, 88, 0.85) 0%, rgba(14, 28, 58, 0.85) 100%);
+    backdrop-filter: blur(6px);
+    -webkit-backdrop-filter: blur(6px);
+    box-shadow: inset 0 1px 0 rgba(147, 197, 253, 0.1);
+  }
+
+  .panel {
+    @apply surface border border-line;
+  }
+
+  /* Filled gradient button: light amber into warm orange */
+  .btn-gradient {
+    background-image: linear-gradient(120deg, #ffc062 0%, #ffa066 45%, #ff8a4c 100%);
+    background-size: 160% 100%;
+    background-position: 0% 50%;
+    color: #1c1206;
+    border-color: transparent;
+    box-shadow: 0 6px 18px -8px rgba(255, 138, 76, 0.55), inset 0 1px 0 rgba(255, 255, 255, 0.35);
+    transition: background-position 0.4s ease, box-shadow 0.3s ease, transform 0.2s ease;
+  }
+  .btn-gradient:hover {
+    background-position: 100% 50%;
+    box-shadow: 0 10px 24px -8px rgba(255, 138, 76, 0.7), inset 0 1px 0 rgba(255, 255, 255, 0.4);
+    transform: translateY(-1px);
+  }
+
+  /* Soft gradient for secondary buttons: a light warm tint with an amber edge */
+  .btn-gradient-soft {
+    background-image: linear-gradient(120deg, rgba(255, 192, 98, 0.16), rgba(255, 138, 76, 0.08));
+    border-color: rgba(255, 160, 102, 0.35);
+    color: #fde7d4;
+    transition: background-color 0.3s ease, border-color 0.3s ease, transform 0.2s ease;
+  }
+  .btn-gradient-soft:hover {
+    background-image: linear-gradient(120deg, rgba(255, 192, 98, 0.26), rgba(255, 138, 76, 0.16));
+    border-color: rgba(255, 160, 102, 0.6);
+    transform: translateY(-1px);
+  }
+
+  /* Danger gradient: light coral into red */
+  .btn-gradient-danger {
+    background-image: linear-gradient(120deg, #ff9a9e 0%, #f0626a 100%);
+    color: #2a0a0c;
+    border-color: transparent;
+    box-shadow: 0 6px 18px -8px rgba(240, 98, 106, 0.6);
+  }
+  .btn-gradient-danger:hover {
+    filter: brightness(1.06);
+    transform: translateY(-1px);
+  }
+
+  /* Kept by name for any markup still using it; now a flat surface */
+  .glass-panel {
+    @apply surface border border-line;
+  }
+  .glass-panel-hover {
+    @apply transition-colors duration-300;
+  }
+  .glass-panel-hover:hover {
+    @apply border-line-bright;
+  }
+
+  /* Corner crosshair marks for any relatively positioned box */
+  .crosshairs {
+    position: relative;
+  }
+  .crosshairs::before,
+  .crosshairs::after {
+    content: '';
+    position: absolute;
+    width: 9px;
+    height: 9px;
+    pointer-events: none;
+    background:
+      linear-gradient(#3d5c99, #3d5c99) center / 1px 100% no-repeat,
+      linear-gradient(#3d5c99, #3d5c99) center / 100% 1px no-repeat;
+  }
+  .crosshairs::before {
+    top: -5px;
+    left: -5px;
+  }
+  .crosshairs::after {
+    bottom: -5px;
+    right: -5px;
+  }
+
+  /* Underline that sweeps in from the left on hover/focus */
+  .link-sweep {
+    background-image: linear-gradient(currentColor, currentColor);
+    background-size: 0% 1px;
+    background-position: 0 100%;
+    background-repeat: no-repeat;
+    transition: background-size 0.4s cubic-bezier(0.16, 1, 0.3, 1), color 0.2s;
+  }
+  .link-sweep:hover,
+  .link-sweep:focus-visible {
+    background-size: 100% 1px;
+  }
+
+  /* Underline-style form field */
+  .field {
+    @apply w-full bg-transparent border-0 border-b border-line-strong px-0 py-2.5 text-[0.95rem] text-fg placeholder-fg-faint rounded-none transition-colors duration-200;
+    @apply focus:border-signal focus:outline-none focus:ring-0;
+  }
+  .field:focus-visible {
+    outline: none;
+  }
+  textarea.field {
+    @apply border border-line-strong px-3 py-2.5 resize-y;
+  }
+  select.field {
+    @apply cursor-pointer appearance-none pr-8;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6' viewBox='0 0 10 6'%3E%3Cpath d='M1 1l4 4 4-4' fill='none' stroke='%238A8A8A' stroke-width='1.2'/%3E%3C/svg%3E");
+    background-repeat: no-repeat;
+    background-position: right 0.25rem center;
+  }
+
+  .skeleton {
+    @apply bg-ink-700 relative overflow-hidden;
+  }
+  .skeleton::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    transform: translateX(-100%);
+    background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.04), transparent);
+    animation: skeleton-sweep 1.6s ease-in-out infinite;
+  }
+
+  /* Editorial imagery: desaturated until hover / focus */
+  .img-mono {
+    filter: grayscale(1) contrast(1.05) brightness(0.85);
+    transition: filter 0.6s cubic-bezier(0.16, 1, 0.3, 1), transform 0.8s cubic-bezier(0.16, 1, 0.3, 1);
+  }
+  .group:hover .img-mono,
+  .group:focus-within .img-mono,
+  .img-mono:hover {
+    filter: none;
+  }
+
+  .scrollbar-none {
+    scrollbar-width: none;
+  }
+  .scrollbar-none::-webkit-scrollbar {
+    display: none;
+  }
+}
+
+@keyframes skeleton-sweep {
+  100% {
+    transform: translateX(100%);
+  }
+}
+
+/* Film grain: fixed, very low opacity, never intercepts input */
+.grain {
+  position: fixed;
+  inset: -50%;
+  z-index: 70;
+  pointer-events: none;
+  opacity: 0.055;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='160' height='160'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+}
+
+/* Custom cursor: only for fine pointers; native cursor kept on text fields */
+@media (pointer: fine) {
+  .has-custom-cursor,
+  .has-custom-cursor a,
+  .has-custom-cursor button,
+  .has-custom-cursor [role='button'],
+  .has-custom-cursor label,
+  .has-custom-cursor select {
+    cursor: none;
+  }
+  .has-custom-cursor input,
+  .has-custom-cursor textarea {
+    cursor: text;
+  }
+}
+
+/* Scrollbar */
+* {
+  scrollbar-width: thin;
+  scrollbar-color: #21396a #050a16;
+}
 ::-webkit-scrollbar {
   width: 8px;
   height: 8px;
 }
 ::-webkit-scrollbar-track {
-  background: #0a0e1a;
+  background: #050a16;
 }
 ::-webkit-scrollbar-thumb {
-  background: #1f293d;
+  background: #21396a;
   border-radius: 4px;
 }
 ::-webkit-scrollbar-thumb:hover {
-  background: #38bdf8;
+  background: #ff8a4c;
 }
 
-/* Glassmorphism utility */
-.glass-panel {
-  background: rgba(17, 24, 39, 0.7);
-  backdrop-filter: blur(12px);
-  -webkit-backdrop-filter: blur(12px);
-  border: 1px solid rgba(255, 255, 255, 0.08);
+/* Leaflet: navy chrome */
+.leaflet-container {
+  background: #050a16;
+  font-family: Inter, system-ui, sans-serif;
+}
+.map-mono .leaflet-tile-pane {
+  filter: grayscale(1) brightness(0.55) contrast(1.25);
+}
+.map-mono-invert .leaflet-tile-pane {
+  filter: grayscale(1) invert(1) brightness(0.75) contrast(1.1);
+}
+.leaflet-popup-content-wrapper,
+.leaflet-popup-tip {
+  background: #0a1428 !important;
+  border: 1px solid #21396a;
+  box-shadow: none !important;
+}
+.leaflet-popup-content-wrapper {
+  border-radius: 2px !important;
+}
+/* Existing popup markup uses inline dark text colours; lift them for the dark popup */
+.leaflet-popup-content,
+.leaflet-popup-content div {
+  color: #eef4ff !important;
+  font-family: 'JetBrains Mono', ui-monospace, monospace;
+  font-size: 11px !important;
+}
+.leaflet-popup-content strong {
+  color: #ffa066 !important;
+  font-weight: 500;
+}
+.leaflet-popup-close-button {
+  color: #9fb3d6 !important;
+}
+.leaflet-control-attribution {
+  background: rgba(5, 10, 22, 0.8) !important;
+  color: #5c7299 !important;
+  font-family: 'JetBrains Mono', ui-monospace, monospace;
+  font-size: 9px !important;
+}
+.leaflet-control-attribution a {
+  color: #9fb3d6 !important;
 }
 
-.glass-panel-hover {
-  transition: all 0.25s ease-in-out;
-}
-.glass-panel-hover:hover {
-  background: rgba(17, 24, 39, 0.85);
-  border-color: rgba(56, 189, 248, 0.3);
-  box-shadow: 0 0 25px -5px rgba(56, 189, 248, 0.2);
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
 }

@@ -2,43 +2,55 @@ import React, { useState, useEffect, useCallback } from 'react';
 import { userService } from '../services/userService';
 import { useAuth } from '../context/AuthContext';
 import { useNotification } from '../context/NotificationContext';
-import Loader from '../components/common/Loader';
 import Modal from '../components/common/Modal';
-import Badge from '../components/common/Badge';
-import CountdownTimer from '../components/launches/CountdownTimer';
-import {
-  Bookmark,
-  Heart,
-  Rocket,
-  Trash2,
-  Edit3,
-  Sparkles,
-  MapPin,
-  Plus,
-  ArrowUpDown,
-  AlertTriangle,
-  FileText,
-  Flag,
-  Save,
-  Search,
-  Eye,
-  BellRing,
-  BookOpen,
-  Calendar,
-} from 'lucide-react';
+import Tag from '../components/common/Tag';
+import Button from '../components/common/Button';
+import Input from '../components/common/Input';
+import Stat from '../components/common/Stat';
+import EmptyState from '../components/common/EmptyState';
+import LiveDot from '../components/common/LiveDot';
+import SectionHeader from '../components/common/SectionHeader';
+import AnimatedNumber from '../components/common/AnimatedNumber';
+import Skeleton, { SkeletonRows } from '../components/common/Skeleton';
+import DashboardTabs from '../components/dashboard/DashboardTabs';
+import JournalCard from '../components/dashboard/JournalCard';
+import MissionCard from '../components/dashboard/MissionCard';
+import TMinus from '../components/dashboard/TMinus';
+import { Edit3, Plus, Save, Search, Trash2, AlertTriangle, ArrowUpRight } from 'lucide-react';
 
-// Priority badge colours
+// Active style for the priority selector (single accent)
 const priorityColors = {
-  high: 'bg-rose-500/20 text-rose-300 border-rose-500/30',
-  medium: 'bg-amber-500/20 text-amber-300 border-amber-500/30',
-  low: 'bg-emerald-500/20 text-emerald-300 border-emerald-500/30',
+  high: 'border-signal text-signal bg-signal-dim',
+  medium: 'border-signal text-signal bg-signal-dim',
+  low: 'border-signal text-signal bg-signal-dim',
 };
 
-const reminderLabels = {
-  none: 'No Reminder',
-  '15m': '15m before',
-  '1h': '1h before',
-  '24h': '1d before',
+// Mission board columns (display grouping only)
+const BOARD_COLUMNS = [
+  { key: 'high', code: 'P1', label: 'High priority' },
+  { key: 'medium', code: 'P2', label: 'Medium priority' },
+  { key: 'low', code: 'P3', label: 'Low priority' },
+];
+
+const JOURNAL_CATEGORIES = [
+  { key: 'all', label: 'All' },
+  { key: 'apod', label: 'APOD' },
+  { key: 'mars', label: 'Mars' },
+  { key: 'launch', label: 'Launches' },
+  { key: 'satellite', label: 'Satellites' },
+];
+
+const JOURNAL_SORTS = [
+  { key: 'newest', label: 'Newest first' },
+  { key: 'oldest', label: 'Oldest first' },
+  { key: 'az', label: 'Title A–Z' },
+];
+
+const pad2 = (n) => String(n).padStart(2, '0');
+const logStamp = (d) => {
+  if (!d) return '—';
+  const t = new Date(d);
+  return `${t.getFullYear()}.${pad2(t.getMonth() + 1)}.${pad2(t.getDate())} ${pad2(t.getHours())}:${pad2(t.getMinutes())}`;
 };
 
 const DashboardPage = () => {
@@ -310,13 +322,49 @@ const DashboardPage = () => {
     return arr;
   };
 
+  // ----- UI-only: which dashboard section is visible -----
+  const [activeTab, setActiveTab] = useState('overview');
+
   // ============================================================
   //  RENDER
   // ============================================================
   if (loading) {
     return (
-      <div className="max-w-7xl mx-auto px-4 py-16">
-        <Loader message="Synthesizing astronaut telemetry dashboard..." />
+      <div className="max-w-shell mx-auto px-4 sm:px-6 lg:px-10 py-10 sm:py-14" role="status" aria-label="Loading your dashboard">
+        <div className="grid grid-cols-12 gap-x-6 lg:gap-x-10 gap-y-8">
+          <div className="hidden lg:block col-span-3 xl:col-span-2 space-y-6">
+            <div className="flex items-center gap-3">
+              <Skeleton className="w-10 h-10" />
+              <div className="flex-1 space-y-2">
+                <Skeleton className="h-3 w-3/4" />
+                <Skeleton className="h-2 w-1/2" />
+              </div>
+            </div>
+            <div className="border-t border-line">
+              {[0, 1, 2, 3].map((i) => (
+                <div key={i} className="py-4 border-b border-line">
+                  <Skeleton className="h-2.5 w-2/3" />
+                </div>
+              ))}
+            </div>
+          </div>
+          <div className="col-span-12 lg:col-span-9 xl:col-span-10 space-y-10">
+            <div className="space-y-6">
+              <Skeleton className="h-px w-full" />
+              <Skeleton className="h-16 w-2/3 sm:w-1/2" />
+              <Skeleton className="h-3 w-1/3" />
+            </div>
+            <div className="grid grid-cols-1 sm:grid-cols-3 border border-line divide-y sm:divide-y-0 sm:divide-x divide-line">
+              {[0, 1, 2].map((i) => (
+                <div key={i} className="p-6 space-y-4">
+                  <Skeleton className="h-2.5 w-24" />
+                  <Skeleton className="h-14 w-20" />
+                </div>
+              ))}
+            </div>
+            <SkeletonRows rows={4} cols={3} />
+          </div>
+        </div>
       </div>
     );
   }
@@ -324,351 +372,400 @@ const DashboardPage = () => {
   const { metrics, nextLaunch, watchlistItems } = dashboardData || {};
   const journalEntries = getFilteredJournalEntries();
 
+  // Display-only derivations (no data is mutated)
+  const recentActivity = [
+    ...(dashboardData?.recentFavorites || []).map((f) => ({
+      key: `fav-${f._id}`,
+      kind: 'journal',
+      title: f.title,
+      meta: f.itemType,
+      at: f.createdAt,
+    })),
+    ...(watchlistItems || []).map((w) => ({
+      key: `watch-${w._id}`,
+      kind: 'watchlist',
+      title: w.launchName,
+      meta: w.agency,
+      at: w.createdAt,
+    })),
+  ]
+    .sort((a, b) => new Date(b.at || 0) - new Date(a.at || 0))
+    .slice(0, 6);
+
+  const boardColumns = BOARD_COLUMNS.map((col) => ({
+    ...col,
+    items: (watchlistItems || []).filter((item) => {
+      const p = BOARD_COLUMNS.some((c) => c.key === item.priority) ? item.priority : 'medium';
+      return p === col.key;
+    }),
+  }));
+
+  const hasJournalFilter = !!journalSearch || journalCategory !== 'all';
+
+  const tabs = [
+    { id: 'overview', index: '01', label: 'Overview' },
+    { id: 'favorites', index: '02', label: 'Favorites', count: metrics?.totalFavorites || 0 },
+    { id: 'watchlist', index: '03', label: 'Watchlist', count: watchlistItems?.length || 0 },
+    { id: 'settings', index: '04', label: 'Settings' },
+  ];
+
+  const avatarSrc = user?.avatar || 'https://images.unsplash.com/photo-1534447677768-be436bb09401?w=200';
+  const joinedOn = new Date(user?.createdAt || Date.now()).toLocaleDateString();
+
   return (
-    <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 space-y-8">
-      {/* ── Profile Header ── */}
-      <div className="glass-panel p-6 sm:p-8 rounded-3xl border border-slate-800 relative overflow-hidden">
-        <div className="flex flex-col sm:flex-row items-center sm:items-start justify-between gap-6">
-          <div className="flex flex-col sm:flex-row items-center sm:items-start gap-5 text-center sm:text-left">
-            <img
-              src={user?.avatar || 'https://images.unsplash.com/photo-1534447677768-be436bb09401?w=200'}
-              alt={user?.name}
-              className="w-20 h-20 rounded-2xl object-cover border-2 border-cyan-400 shadow-glow-cyan"
-            />
-            <div className="space-y-1">
-              <div className="flex flex-wrap items-center justify-center sm:justify-start gap-2">
-                <h1 className="text-2xl font-black text-white">{user?.name}</h1>
-                <Badge variant="go">Flight Ready</Badge>
-              </div>
-              <p className="text-xs text-slate-400 font-mono">{user?.email}</p>
-              <p className="text-xs text-slate-300 max-w-xl pt-1 leading-relaxed">
-                {user?.bio || 'Space enthusiast exploring the cosmos with CosmicHorizon.'}
-              </p>
+    <div className="max-w-shell mx-auto px-4 sm:px-6 lg:px-10 py-8 sm:py-14">
+      <div className="grid grid-cols-12 gap-x-6 lg:gap-x-10 gap-y-8 items-start">
+        {/* ── Left rail / mobile tab strip ── */}
+        <aside className="col-span-12 lg:col-span-3 xl:col-span-2 lg:sticky lg:top-24 min-w-0 space-y-6">
+          <div className="flex items-center gap-3">
+            <img src={avatarSrc} alt="" className="w-10 h-10 object-cover grayscale border border-line-strong" />
+            <div className="min-w-0">
+              <p className="text-sm text-fg truncate">{user?.name}</p>
+              <LiveDot label="Flight ready" />
             </div>
           </div>
+          <DashboardTabs tabs={tabs} activeTab={activeTab} onChange={setActiveTab} />
+          <p className="hidden lg:block font-mono text-[0.625rem] leading-relaxed text-fg-faint uppercase tracking-label">
+            Mission log
+            <br />
+            Joined {joinedOn}
+          </p>
+        </aside>
 
-          <div className="flex items-center gap-2">
-            <button
-              onClick={() => setIsEditModalOpen(true)}
-              className="flex items-center gap-1.5 px-4 py-2 rounded-xl text-xs font-semibold bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700 transition"
-            >
-              <Edit3 className="w-3.5 h-3.5" />
-              <span>Edit Profile</span>
-            </button>
-          </div>
-        </div>
-      </div>
+        <div className="col-span-12 lg:col-span-9 xl:col-span-10 min-w-0">
+          {/* ══════════════════ 01 OVERVIEW ══════════════════ */}
+          {activeTab === 'overview' && (
+            <section id="dashboard-panel-overview" role="tabpanel" aria-labelledby="dashboard-tab-overview" className="space-y-12 animate-fade-in">
+              <SectionHeader
+                index="01"
+                eyebrow="Mission log / overview"
+                size="md"
+                title={user?.name}
+                description={user?.bio || 'Space enthusiast exploring the cosmos with CosmicHorizon.'}
+                actions={
+                  <Button variant="secondary" size="sm" icon={Edit3} onClick={() => setIsEditModalOpen(true)}>
+                    Edit profile
+                  </Button>
+                }
+              />
 
-      {/* ── Metric Widgets ── */}
-      <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
-        <div className="glass-panel p-5 rounded-2xl border border-slate-800">
-          <div className="flex items-center text-xs text-slate-400 mb-1 gap-1.5">
-            <Bookmark className="w-4 h-4 text-cyan-400" />
-            Tracked Launches
-          </div>
-          <div className="text-3xl font-black font-mono text-slate-100">{metrics?.totalWatchlist || 0}</div>
-          <div className="text-[11px] text-slate-500 mt-1">Active mission watchlists</div>
-        </div>
+              <dl className="flex flex-wrap gap-x-8 gap-y-2 -mt-6 font-mono text-[0.6875rem]">
+                <div className="flex gap-2">
+                  <dt className="text-fg-faint uppercase tracking-label">Callsign</dt>
+                  <dd className="text-fg-muted break-all">{user?.email}</dd>
+                </div>
+                <div className="flex gap-2">
+                  <dt className="text-fg-faint uppercase tracking-label">Joined</dt>
+                  <dd className="text-fg-muted">{joinedOn}</dd>
+                </div>
+              </dl>
 
-        <div className="glass-panel p-5 rounded-2xl border border-slate-800">
-          <div className="flex items-center text-xs text-slate-400 mb-1 gap-1.5">
-            <BookOpen className="w-4 h-4 text-rose-400" />
-            Space Journal Entries
-          </div>
-          <div className="text-3xl font-black font-mono text-slate-100">{metrics?.totalFavorites || 0}</div>
-          <div className="text-[11px] text-slate-500 mt-1">Saved discoveries &amp; observations</div>
-        </div>
-
-        <div className="glass-panel p-5 rounded-2xl border border-slate-800 col-span-2 md:col-span-1">
-          <div className="flex items-center text-xs text-slate-400 mb-1 gap-1.5">
-            <Sparkles className="w-4 h-4 text-amber-400" />
-            Cadet Status
-          </div>
-          <div className="text-xl font-black text-amber-400">Cosmic Explorer</div>
-          <div className="text-[11px] text-slate-500 mt-1">
-            Joined {new Date(user?.createdAt || Date.now()).toLocaleDateString()}
-          </div>
-        </div>
-      </div>
-
-      {/* ── Next Upcoming Launch Hero ── */}
-      {nextLaunch && (
-        <div className="glass-panel p-6 rounded-2xl border border-cyan-500/30 bg-gradient-to-r from-space-card to-cyan-950/20 shadow-glow-cyan">
-          <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
-            <div className="space-y-2">
-              <div className="flex items-center gap-2">
-                <span className="w-2 h-2 rounded-full bg-cyan-400 animate-ping"></span>
-                <span className="text-xs font-bold uppercase tracking-wider text-cyan-400">Next Tracked Countdown</span>
-              </div>
-              <h3 className="text-xl font-black text-white">{nextLaunch.launchName}</h3>
-              <div className="flex flex-wrap items-center gap-4 text-xs text-slate-300">
-                <span className="flex items-center gap-1">
-                  <Rocket className="w-3.5 h-3.5 text-indigo-400" />
-                  {nextLaunch.rocket} ({nextLaunch.agency})
-                </span>
-                {nextLaunch.padLocation && (
-                  <span className="flex items-center gap-1">
-                    <MapPin className="w-3.5 h-3.5 text-rose-400" />
-                    {nextLaunch.padLocation}
-                  </span>
-                )}
-              </div>
-            </div>
-            <CountdownTimer targetDate={nextLaunch.launchDate} />
-          </div>
-        </div>
-      )}
-
-      {/* ── Watchlist Section ── */}
-      <div className="glass-panel p-6 rounded-2xl border border-slate-800 space-y-4">
-        <div className="flex items-center justify-between">
-          <div className="flex items-center gap-2">
-            <Rocket className="w-5 h-5 text-indigo-400" />
-            <h2 className="text-lg font-bold text-white">My Mission Watchlist &amp; Reminders</h2>
-          </div>
-          <span className="text-xs font-mono text-slate-400">{watchlistItems?.length || 0} Missions</span>
-        </div>
-
-        {!watchlistItems || watchlistItems.length === 0 ? (
-          <div className="text-center py-8 text-slate-400 text-xs">
-            No missions in your watchlist yet. Visit the{' '}
-            <a href="/launches" className="text-cyan-400 font-bold hover:underline">Launches Page</a>{' '}
-            to track upcoming rocket launches and set reminders.
-          </div>
-        ) : (
-          <div className="overflow-x-auto">
-            <table className="w-full text-left text-xs">
-              <thead className="text-slate-400 border-b border-slate-800">
-                <tr>
-                  <th className="pb-3 font-semibold">Mission Name</th>
-                  <th className="pb-3 font-semibold">Agency / Rocket</th>
-                  <th className="pb-3 font-semibold">Launch Date</th>
-                  <th className="pb-3 font-semibold">Priority</th>
-                  <th className="pb-3 font-semibold">Reminder</th>
-                  <th className="pb-3 font-semibold">Countdown</th>
-                  <th className="pb-3 font-semibold text-right">Actions</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-slate-800/60">
-                {watchlistItems.map((item) => (
-                  <tr key={item._id} className="hover:bg-slate-800/30 transition">
-                    <td className="py-3 font-bold text-slate-100">
-                      <div>{item.launchName}</div>
-                      {item.notes && (
-                        <div className="text-[10px] text-slate-400 mt-0.5 line-clamp-1 italic">📝 {item.notes}</div>
-                      )}
-                    </td>
-                    <td className="py-3 text-slate-300">{item.agency} • {item.rocket}</td>
-                    <td className="py-3 text-slate-300">{new Date(item.launchDate).toLocaleDateString()}</td>
-                    <td className="py-3">
-                      <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold border ${priorityColors[item.priority || 'medium']}`}>
-                        {(item.priority || 'medium').toUpperCase()}
-                      </span>
-                    </td>
-                    <td className="py-3">
-                      {item.reminderTime && item.reminderTime !== 'none' ? (
-                        <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold bg-amber-500/20 text-amber-300 border border-amber-500/30">
-                          <BellRing className="w-3 h-3" />
-                          {reminderLabels[item.reminderTime] || item.reminderTime}
-                        </span>
-                      ) : (
-                        <span className="text-slate-500 text-[11px]">Off</span>
-                      )}
-                    </td>
-                    <td className="py-3">
-                      <CountdownTimer targetDate={item.launchDate} />
-                    </td>
-                    <td className="py-3 text-right">
-                      <div className="flex items-center justify-end gap-1">
-                        <button
-                          onClick={() => openEditWatch(item)}
-                          className="p-1.5 rounded-lg text-slate-400 hover:text-cyan-400 hover:bg-cyan-500/10 transition"
-                          title="Edit Priority, Reminder & Notes"
-                        >
-                          <Edit3 className="w-4 h-4" />
-                        </button>
-                        <button
-                          onClick={() => requestDelete('watchlist', item._id, item.launchName)}
-                          className="p-1.5 rounded-lg text-slate-400 hover:text-rose-400 hover:bg-rose-500/10 transition"
-                          title="Remove from Watchlist"
-                        >
-                          <Trash2 className="w-4 h-4" />
-                        </button>
-                      </div>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        )}
-      </div>
-
-      {/* ══════════════════════════════════════════════════
-           MY SPACE JOURNAL (Full CRUD + Search + View Details)
-         ══════════════════════════════════════════════════ */}
-      <div className="glass-panel p-6 rounded-2xl border border-slate-800 space-y-5">
-        {/* Header + Add Journal Entry Button */}
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-          <div>
-            <div className="flex items-center gap-2">
-              <BookOpen className="w-5 h-5 text-cyan-400" />
-              <h2 className="text-lg font-bold text-white">My Space Journal</h2>
-            </div>
-            <p className="text-xs text-slate-400 mt-0.5">
-              Record your space discoveries, Mars rover sightings, and personal astronomical observations.
-            </p>
-          </div>
-
-          <button
-            onClick={() => setIsAddNoteOpen(true)}
-            className="flex items-center gap-1.5 px-4 py-2 rounded-xl text-xs font-bold bg-gradient-to-r from-cyan-500 to-indigo-600 text-white shadow-glow-cyan hover:opacity-95 transition self-start sm:self-auto"
-          >
-            <Plus className="w-4 h-4" />
-            <span>Add Journal Entry</span>
-          </button>
-        </div>
-
-        {/* Search, Category Filter & Sort Toolbar */}
-        <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-3 pt-2 border-t border-slate-800/80">
-          {/* Search Input */}
-          <div className="relative flex-1 max-w-md">
-            <Search className="w-4 h-4 text-slate-400 absolute left-3.5 top-1/2 -translate-y-1/2" />
-            <input
-              type="text"
-              value={journalSearch}
-              onChange={(e) => setJournalSearch(e.target.value)}
-              placeholder="Search journal by title, description, or personal notes..."
-              className="w-full pl-9 pr-3.5 py-1.5 rounded-xl bg-slate-900 border border-slate-700 text-xs text-slate-100 placeholder-slate-500 focus:outline-none focus:border-cyan-500"
-            />
-          </div>
-
-          <div className="flex flex-wrap items-center gap-2">
-            {/* Category Filter Pills */}
-            {[
-              { key: 'all', label: 'All' },
-              { key: 'apod', label: 'APOD' },
-              { key: 'mars', label: 'Mars' },
-              { key: 'launch', label: 'Launches' },
-              { key: 'satellite', label: 'Satellites' },
-            ].map(({ key, label }) => (
-              <button
-                key={key}
-                type="button"
-                onClick={() => setJournalCategory(key)}
-                className={`px-2.5 py-1 rounded-lg text-[11px] font-semibold transition border ${
-                  journalCategory === key
-                    ? 'bg-indigo-500/20 text-indigo-300 border-indigo-500/40'
-                    : 'bg-slate-900 text-slate-400 border-slate-800 hover:text-slate-200'
-                }`}
-              >
-                {label}
-              </button>
-            ))}
-
-            {/* Sort Controls */}
-            <div className="flex items-center gap-1 ml-1 pl-2 border-l border-slate-800">
-              <ArrowUpDown className="w-3.5 h-3.5 text-slate-400" />
-              {[
-                { key: 'newest', label: 'Newest' },
-                { key: 'oldest', label: 'Oldest' },
-                { key: 'az', label: 'A–Z' },
-              ].map(({ key, label }) => (
-                <button
-                  key={key}
-                  onClick={() => setFavSort(key)}
-                  className={`px-2 py-1 rounded-lg text-[11px] font-semibold transition border ${
-                    favSort === key
-                      ? 'bg-cyan-500/20 text-cyan-300 border-cyan-500/30'
-                      : 'bg-slate-800 text-slate-400 border-slate-700 hover:text-slate-200'
-                  }`}
-                >
-                  {label}
-                </button>
-              ))}
-            </div>
-          </div>
-        </div>
-
-        {/* Journal Cards Grid */}
-        {journalEntries.length === 0 ? (
-          <div className="text-center py-10 text-slate-400 text-xs space-y-2">
-            <p>
-              {journalSearch || journalCategory !== 'all'
-                ? 'No space journal entries match your current search or filter.'
-                : 'Your Space Journal is empty. Click "Add Journal Entry" above or save discoveries from the NASA Explorer!'}
-            </p>
-          </div>
-        ) : (
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-            {journalEntries.map((fav) => (
-              <div
-                key={fav._id}
-                className="glass-panel rounded-xl overflow-hidden border border-slate-800 flex flex-col justify-between group hover:border-slate-700 transition"
-              >
-                {fav.imageUrl && (
-                  <div
-                    onClick={() => setViewFavItem(fav)}
-                    className="h-40 w-full overflow-hidden bg-black cursor-pointer relative"
-                  >
-                    <img
-                      src={fav.imageUrl}
-                      alt={fav.title}
-                      className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
-                    />
-                  </div>
-                )}
-                <div className="p-4 flex-1 flex flex-col justify-between space-y-3">
+              {/* ── Bento: stats + next launch + activity ── */}
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-6 border border-line">
+                <div className="lg:col-span-2 p-6 sm:p-8 border-b sm:border-r border-line">
+                  <Stat
+                    label="Watchlist / tracked launches"
+                    size="xl"
+                    accent
+                    value={<AnimatedNumber value={metrics?.totalWatchlist || 0} format={(n) => pad2(Math.round(n))} />}
+                  />
+                </div>
+                <div className="lg:col-span-2 p-6 sm:p-8 border-b lg:border-r border-line">
+                  <Stat
+                    label="Journal / saved entries"
+                    size="xl"
+                    value={<AnimatedNumber value={metrics?.totalFavorites || 0} format={(n) => pad2(Math.round(n))} />}
+                  />
+                </div>
+                <div className="sm:col-span-2 lg:col-span-2 p-6 sm:p-8 border-b border-line flex flex-col justify-between gap-6">
+                  <span className="label">Classification</span>
                   <div>
-                    <div className="flex items-center justify-between text-[10px] text-slate-400 uppercase tracking-wider mb-1">
-                      <span className="px-2 py-0.5 rounded bg-slate-800 text-cyan-300 font-bold">
-                        {fav.itemType}
-                      </span>
-                      <span>{new Date(fav.createdAt).toLocaleDateString()}</span>
-                    </div>
-                    <h4 className="text-sm font-bold text-slate-100 line-clamp-1 mt-1">{fav.title}</h4>
-                    <p className="text-xs text-slate-400 line-clamp-2 mt-1">{fav.description}</p>
-                    {fav.notes && (
-                      <div className="mt-2 p-2 rounded-lg bg-cyan-950/20 border border-cyan-500/20 text-[11px] text-cyan-300 line-clamp-2 italic">
-                        📝 {fav.notes}
-                      </div>
-                    )}
-                  </div>
-
-                  {/* Card Actions: View Details | Edit | Delete */}
-                  <div className="flex items-center justify-between pt-2.5 border-t border-slate-800/80 text-[11px]">
-                    <button
-                      onClick={() => setViewFavItem(fav)}
-                      className="flex items-center gap-1 text-slate-300 hover:text-cyan-400 font-semibold transition"
-                    >
-                      <Eye className="w-3.5 h-3.5" />
-                      <span>View Details</span>
-                    </button>
-
-                    <div className="flex items-center gap-3">
-                      <button
-                        onClick={() => openEditFav(fav)}
-                        className="flex items-center gap-1 text-slate-400 hover:text-amber-400 transition"
-                        title="Edit journal entry"
-                      >
-                        <Edit3 className="w-3.5 h-3.5" />
-                        <span>Edit</span>
-                      </button>
-                      <button
-                        onClick={() => requestDelete('favorite', fav._id, fav.title)}
-                        className="flex items-center gap-1 text-slate-400 hover:text-rose-400 transition"
-                        title="Delete journal entry"
-                      >
-                        <Trash2 className="w-3.5 h-3.5" />
-                        <span>Delete</span>
-                      </button>
-                    </div>
+                    <p className="font-display text-4xl leading-none text-fg">Cosmic Explorer</p>
+                    <p className="font-mono text-[0.6875rem] text-fg-muted mt-3">Cadet status since {joinedOn}</p>
                   </div>
                 </div>
+
+                {/* Next tracked launch */}
+                <div className="sm:col-span-2 lg:col-span-6 p-6 sm:p-8 border-b border-line">
+                  {nextLaunch ? (
+                    <div className="grid grid-cols-12 gap-6 items-end">
+                      <div className="col-span-12 xl:col-span-6 space-y-4">
+                        <span className="label">Next tracked launch</span>
+                        <h2 className="font-display text-display-sm text-fg">{nextLaunch.launchName}</h2>
+                        <p className="font-mono text-[0.6875rem] text-fg-muted">
+                          {nextLaunch.rocket} / {nextLaunch.agency}
+                          {nextLaunch.padLocation && <span className="text-fg-faint"> — {nextLaunch.padLocation}</span>}
+                        </p>
+                      </div>
+                      <div className="col-span-12 xl:col-span-6 xl:justify-self-end">
+                        <TMinus targetDate={nextLaunch.launchDate} size="lg" />
+                      </div>
+                    </div>
+                  ) : (
+                    <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+                      <div className="space-y-2">
+                        <span className="label">Next tracked launch</span>
+                        <p className="font-display text-3xl text-fg-muted">No launch on the board.</p>
+                      </div>
+                      <Button variant="secondary" size="sm" to="/launches" iconRight={ArrowUpRight}>
+                        Open manifest
+                      </Button>
+                    </div>
+                  )}
+                </div>
+
+                {/* Recent activity: ruled log */}
+                <div className="sm:col-span-2 lg:col-span-6">
+                  <div className="flex items-center justify-between px-6 sm:px-8 h-11 border-b border-line">
+                    <h2 className="label text-fg">Recent activity</h2>
+                    <span className="label text-fg-faint">{pad2(recentActivity.length)} entries</span>
+                  </div>
+                  {recentActivity.length === 0 ? (
+                    <p className="px-6 sm:px-8 py-8 text-sm text-fg-muted">
+                      No activity yet. Save a discovery from the NASA gallery or track a launch to start your mission log.
+                    </p>
+                  ) : (
+                    <ol className="divide-y divide-line">
+                      {recentActivity.map((a) => (
+                        <li
+                          key={a.key}
+                          className="grid grid-cols-[auto_1fr] sm:grid-cols-[9.5rem_5.5rem_1fr_auto] gap-x-4 gap-y-1 items-baseline px-6 sm:px-8 py-3.5 hover:bg-ink-900 transition-colors"
+                        >
+                          <time className="font-mono text-[0.6875rem] text-fg-faint tabular-nums" dateTime={a.at}>
+                            {logStamp(a.at)}
+                          </time>
+                          <span className="justify-self-end sm:justify-self-start">
+                            <Tag variant={a.kind === 'journal' ? 'neutral' : 'signal'}>{a.kind === 'journal' ? 'Journal' : 'Watch'}</Tag>
+                          </span>
+                          <p className="col-span-2 sm:col-span-1 text-sm text-fg truncate">{a.title}</p>
+                          {a.meta && (
+                            <span className="hidden sm:inline font-mono text-[0.625rem] uppercase tracking-label text-fg-faint">{a.meta}</span>
+                          )}
+                        </li>
+                      ))}
+                    </ol>
+                  )}
+                </div>
               </div>
-            ))}
-          </div>
-        )}
+            </section>
+          )}
+
+          {/* ══════════════════ 02 FAVORITES / SPACE JOURNAL (Full CRUD) ══════════════════ */}
+          {activeTab === 'favorites' && (
+            <section id="dashboard-panel-favorites" role="tabpanel" aria-labelledby="dashboard-tab-favorites" className="space-y-8 animate-fade-in">
+              <SectionHeader
+                index="02"
+                eyebrow="Saved discoveries"
+                size="md"
+                title={
+                  <>
+                    Space <span className="italic text-fg-muted">journal</span>
+                  </>
+                }
+                description="Record your space discoveries, Mars rover sightings, and personal astronomical observations."
+                actions={
+                  <Button icon={Plus} size="sm" onClick={() => setIsAddNoteOpen(true)}>
+                    Add entry
+                  </Button>
+                }
+              />
+
+              {/* Toolbar: search / category / sort */}
+              <div className="grid grid-cols-12 gap-x-6 gap-y-5 items-end border-y border-line py-5">
+                <label className="col-span-12 lg:col-span-5 relative group/field">
+                  <span className="label block mb-1 group-focus-within/field:text-signal">Search journal</span>
+                  <Search className="absolute left-0 bottom-3 w-4 h-4 text-fg-faint" strokeWidth={1.5} aria-hidden="true" />
+                  <input
+                    type="text"
+                    value={journalSearch}
+                    onChange={(e) => setJournalSearch(e.target.value)}
+                    placeholder="Title, description or notes"
+                    className="field pl-7"
+                  />
+                </label>
+
+                <div className="col-span-12 sm:col-span-8 lg:col-span-5">
+                  <span className="label block mb-2" id="journal-category-label">
+                    Category
+                  </span>
+                  <div className="flex flex-wrap border border-line w-max max-w-full" role="group" aria-labelledby="journal-category-label">
+                    {JOURNAL_CATEGORIES.map(({ key, label }) => (
+                      <button
+                        key={key}
+                        type="button"
+                        aria-pressed={journalCategory === key}
+                        onClick={() => setJournalCategory(key)}
+                        className={`h-9 px-3 font-mono text-[0.625rem] uppercase tracking-label border-r border-line last:border-r-0 transition-colors ${
+                          journalCategory === key ? 'bg-fg text-black' : 'text-fg-muted hover:text-fg hover:bg-ink-800'
+                        }`}
+                      >
+                        {label}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+
+                <div className="col-span-12 sm:col-span-4 lg:col-span-2">
+                  <Input as="select" label="Sort" value={favSort} onChange={(e) => setFavSort(e.target.value)} inputClassName="font-mono text-xs uppercase tracking-label">
+                    {JOURNAL_SORTS.map(({ key, label }) => (
+                      <option key={key} value={key}>
+                        {label}
+                      </option>
+                    ))}
+                  </Input>
+                </div>
+              </div>
+
+              <p className="label text-fg-faint -mt-4" aria-live="polite">
+                Showing {pad2(journalEntries.length)} {journalEntries.length === 1 ? 'entry' : 'entries'}
+              </p>
+
+              {journalEntries.length === 0 ? (
+                hasJournalFilter ? (
+                  <EmptyState
+                    code="ERR 404 — NO MATCH"
+                    title="Nothing in the log matches that query."
+                    description="No space journal entries match your current search or category."
+                    action={
+                      <Button
+                        variant="secondary"
+                        size="sm"
+                        onClick={() => {
+                          setJournalSearch('');
+                          setJournalCategory('all');
+                        }}
+                      >
+                        Clear search &amp; filter
+                      </Button>
+                    }
+                  />
+                ) : (
+                  <EmptyState
+                    code="LOG EMPTY"
+                    title="The journal has no entries yet."
+                    description='Use "Add entry" to record an observation, or save discoveries from the NASA gallery.'
+                    action={
+                      <>
+                        <Button icon={Plus} size="sm" onClick={() => setIsAddNoteOpen(true)}>
+                          Add entry
+                        </Button>
+                        <Button variant="secondary" size="sm" to="/nasa" iconRight={ArrowUpRight}>
+                          Open gallery
+                        </Button>
+                      </>
+                    }
+                  />
+                )
+              ) : (
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-4">
+                  {journalEntries.map((fav, i) => (
+                    <JournalCard
+                      key={fav._id}
+                      fav={fav}
+                      featured={i === 0 && journalEntries.length > 2}
+                      onView={setViewFavItem}
+                      onEdit={openEditFav}
+                      onDelete={(f) => requestDelete('favorite', f._id, f.title)}
+                    />
+                  ))}
+                </div>
+              )}
+            </section>
+          )}
+
+          {/* ══════════════════ 03 WATCHLIST: MISSION BOARD ══════════════════ */}
+          {activeTab === 'watchlist' && (
+            <section id="dashboard-panel-watchlist" role="tabpanel" aria-labelledby="dashboard-tab-watchlist" className="space-y-8 animate-fade-in">
+              <SectionHeader
+                index="03"
+                eyebrow={`${pad2(watchlistItems?.length || 0)} missions tracked`}
+                size="md"
+                title={
+                  <>
+                    Mission <span className="italic text-fg-muted">board</span>
+                  </>
+                }
+                description="Tracked launches grouped by priority, with reminders and live T-minus counts."
+                actions={
+                  <Button variant="secondary" size="sm" to="/launches" iconRight={ArrowUpRight}>
+                    Launch manifest
+                  </Button>
+                }
+              />
+
+              {!watchlistItems || watchlistItems.length === 0 ? (
+                <EmptyState
+                  code="BOARD CLEAR"
+                  title="No missions on the board."
+                  description="Track upcoming rocket launches from the manifest and set reminders; they will appear here by priority."
+                  action={
+                    <Button size="sm" to="/launches" iconRight={ArrowUpRight}>
+                      Browse launches
+                    </Button>
+                  }
+                />
+              ) : (
+                <div className="grid grid-cols-1 lg:grid-cols-3 border border-line divide-y lg:divide-y-0 lg:divide-x divide-line">
+                  {boardColumns.map((col) => (
+                    <div key={col.key} className="min-w-0">
+                      <div className="flex items-center justify-between px-4 sm:px-5 h-11 border-b border-line surface">
+                        <h3 className="flex items-baseline gap-2.5 label text-fg">
+                          <span className={col.key === 'high' ? 'text-signal' : 'text-fg-faint'}>{col.code}</span>
+                          {col.label}
+                        </h3>
+                        <span className="telemetry text-[0.6875rem] text-fg-muted">{pad2(col.items.length)}</span>
+                      </div>
+                      {col.items.length === 0 ? (
+                        <p className="label text-fg-faint text-center py-10">— No missions —</p>
+                      ) : (
+                        <div className="divide-y divide-line">
+                          {col.items.map((item) => (
+                            <MissionCard
+                              key={item._id}
+                              item={item}
+                              onEdit={openEditWatch}
+                              onRemove={(w) => requestDelete('watchlist', w._id, w.launchName)}
+                            />
+                          ))}
+                        </div>
+                      )}
+                    </div>
+                  ))}
+                </div>
+              )}
+            </section>
+          )}
+
+          {/* ══════════════════ 04 SETTINGS ══════════════════ */}
+          {activeTab === 'settings' && (
+            <section id="dashboard-panel-settings" role="tabpanel" aria-labelledby="dashboard-tab-settings" className="space-y-8 animate-fade-in">
+              <SectionHeader index="04" eyebrow="Account" size="md" title="Settings" />
+
+              <div className="grid grid-cols-12 gap-x-6 gap-y-8">
+                <div className="col-span-12 md:col-span-4 xl:col-span-3 space-y-5">
+                  <img src={avatarSrc} alt={user?.name} className="w-32 h-32 object-cover grayscale border border-line-strong" />
+                  <Button icon={Edit3} size="sm" onClick={() => setIsEditModalOpen(true)}>
+                    Edit profile
+                  </Button>
+                </div>
+
+                <dl className="col-span-12 md:col-span-8 xl:col-span-9 border-t border-line">
+                  {[
+                    { label: 'Call sign / name', value: <span className="font-display text-3xl leading-none">{user?.name}</span> },
+                    { label: 'Email', value: <span className="font-mono text-sm break-all">{user?.email}</span> },
+                    { label: 'Mission bio', value: <span className="text-sm text-fg-muted leading-relaxed">{user?.bio || 'Space enthusiast exploring the cosmos with CosmicHorizon.'}</span> },
+                    { label: 'Joined', value: <span className="font-mono text-sm">{joinedOn}</span> },
+                  ].map((row) => (
+                    <div key={row.label} className="grid grid-cols-1 sm:grid-cols-[11rem_1fr] gap-x-6 gap-y-1.5 py-5 border-b border-line">
+                      <dt className="label">{row.label}</dt>
+                      <dd className="text-fg">{row.value}</dd>
+                    </div>
+                  ))}
+                </dl>
+              </div>
+            </section>
+          )}
+        </div>
       </div>
 
       {/* ══════════════════════════════════════════════════
@@ -676,128 +773,96 @@ const DashboardPage = () => {
          ══════════════════════════════════════════════════ */}
 
       {/* Edit Profile Modal */}
-      <Modal isOpen={isEditModalOpen} onClose={() => setIsEditModalOpen(false)} title="Update Astronaut Profile" maxWidth="max-w-md">
-        <form onSubmit={handleProfileSubmit} className="space-y-4">
-          <div>
-            <label className="text-xs font-semibold text-slate-300 block mb-1">Call Sign / Name</label>
-            <input
-              type="text"
-              value={nameInput}
-              onChange={(e) => setNameInput(e.target.value)}
-              className="w-full px-3.5 py-2 rounded-xl bg-slate-900 border border-slate-700 text-sm text-slate-100 focus:outline-none focus:border-cyan-500"
-              required
-              minLength={2}
-            />
-          </div>
-          <div>
-            <label className="text-xs font-semibold text-slate-300 block mb-1">Mission Bio</label>
-            <textarea
-              rows={3}
-              value={bioInput}
-              onChange={(e) => setBioInput(e.target.value)}
-              className="w-full px-3.5 py-2 rounded-xl bg-slate-900 border border-slate-700 text-sm text-slate-100 focus:outline-none focus:border-cyan-500"
-              placeholder="Your astronomy research interests..."
-            />
-          </div>
-          <div className="flex justify-end gap-2 pt-2">
-            <button type="button" onClick={() => setIsEditModalOpen(false)}
-              className="px-4 py-2 rounded-xl text-xs font-medium border border-slate-700 text-slate-300 hover:text-white">
+      <Modal isOpen={isEditModalOpen} onClose={() => setIsEditModalOpen(false)} title="Update astronaut profile" maxWidth="max-w-md">
+        <form onSubmit={handleProfileSubmit} className="space-y-6">
+          <Input
+            label="Call sign / name"
+            type="text"
+            value={nameInput}
+            onChange={(e) => setNameInput(e.target.value)}
+            required
+            minLength={2}
+          />
+          <Input
+            as="textarea"
+            label="Mission bio"
+            rows={3}
+            value={bioInput}
+            onChange={(e) => setBioInput(e.target.value)}
+            placeholder="Your astronomy research interests..."
+          />
+          <div className="flex justify-end gap-2 pt-2 border-t border-line">
+            <Button variant="ghost" size="sm" onClick={() => setIsEditModalOpen(false)}>
               Cancel
-            </button>
-            <button type="submit" disabled={isUpdating}
-              className="px-4 py-2 rounded-xl text-xs font-bold bg-cyan-500 text-black shadow-glow-cyan hover:bg-cyan-400 transition">
+            </Button>
+            <Button type="submit" size="sm" disabled={isUpdating} loading={isUpdating}>
               {isUpdating ? 'Saving...' : 'Save Profile'}
-            </button>
+            </Button>
           </div>
         </form>
       </Modal>
 
       {/* Add Space Journal Entry Modal (CREATE) */}
-      <Modal isOpen={isAddNoteOpen} onClose={() => { setIsAddNoteOpen(false); setNoteErrors({}); }} title="Add Space Journal Entry" maxWidth="max-w-lg">
-        <form onSubmit={handleAddNote} className="space-y-4">
-          <div>
-            <label className="text-xs font-semibold text-slate-300 block mb-1">
-              Discovery / Entry Title <span className="text-rose-400">*</span>
-            </label>
-            <input
-              type="text"
-              value={noteTitle}
-              onChange={(e) => { setNoteTitle(e.target.value); setNoteErrors((p) => ({ ...p, title: '' })); }}
-              placeholder="e.g., Perseverance Mastcam Ridge Observation"
-              className={`w-full px-3.5 py-2 rounded-xl bg-slate-900 border text-sm text-slate-100 focus:outline-none transition ${
-                noteErrors.title ? 'border-rose-500 focus:border-rose-400' : 'border-slate-700 focus:border-cyan-500'
-              }`}
-            />
-            {noteErrors.title && <p className="text-[11px] text-rose-400 mt-1">{noteErrors.title}</p>}
-          </div>
+      <Modal isOpen={isAddNoteOpen} onClose={() => { setIsAddNoteOpen(false); setNoteErrors({}); }} title="New journal entry" maxWidth="max-w-lg">
+        <form onSubmit={handleAddNote} className="space-y-6">
+          <Input
+            label={<>Discovery / entry title <span className="text-signal" aria-hidden="true">*</span></>}
+            type="text"
+            value={noteTitle}
+            onChange={(e) => { setNoteTitle(e.target.value); setNoteErrors((p) => ({ ...p, title: '' })); }}
+            placeholder="e.g., Perseverance Mastcam Ridge Observation"
+            error={noteErrors.title}
+          />
 
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-            <div>
-              <label className="text-xs font-semibold text-slate-300 block mb-1">Category</label>
-              <select
-                value={noteCategory}
-                onChange={(e) => setNoteCategory(e.target.value)}
-                className="w-full px-3.5 py-2 rounded-xl bg-slate-900 border border-slate-700 text-sm text-slate-100 focus:outline-none focus:border-cyan-500"
-              >
-                <option value="apod">APOD – Astronomy Picture</option>
-                <option value="mars">Mars – Rover Observation</option>
-                <option value="launch">Launch – Mission Note</option>
-                <option value="satellite">Satellite – Tracking Note</option>
-              </select>
-            </div>
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
+            <Input
+              as="select"
+              label="Category"
+              value={noteCategory}
+              onChange={(e) => setNoteCategory(e.target.value)}
+            >
+              <option value="apod">APOD – Astronomy Picture</option>
+              <option value="mars">Mars – Rover Observation</option>
+              <option value="launch">Launch – Mission Note</option>
+              <option value="satellite">Satellite – Tracking Note</option>
+            </Input>
 
-            <div>
-              <label className="text-xs font-semibold text-slate-300 block mb-1">Image URL (Optional)</label>
-              <input
-                type="url"
-                value={noteImageUrl}
-                onChange={(e) => setNoteImageUrl(e.target.value)}
-                placeholder="https://..."
-                className="w-full px-3.5 py-2 rounded-xl bg-slate-900 border border-slate-700 text-sm text-slate-100 focus:outline-none focus:border-cyan-500"
-              />
-            </div>
-          </div>
-
-          <div>
-            <label className="text-xs font-semibold text-slate-300 block mb-1">
-              Observation Description <span className="text-rose-400">*</span>
-            </label>
-            <textarea
-              rows={3}
-              value={noteDescription}
-              onChange={(e) => { setNoteDescription(e.target.value); setNoteErrors((p) => ({ ...p, description: '' })); }}
-              placeholder="Describe the celestial object, Mars photograph, or mission event..."
-              className={`w-full px-3.5 py-2 rounded-xl bg-slate-900 border text-sm text-slate-100 focus:outline-none transition ${
-                noteErrors.description ? 'border-rose-500 focus:border-rose-400' : 'border-slate-700 focus:border-cyan-500'
-              }`}
-            />
-            {noteErrors.description && <p className="text-[11px] text-rose-400 mt-1">{noteErrors.description}</p>}
-          </div>
-
-          <div>
-            <label className="text-xs font-semibold text-slate-300 block mb-1">
-              Personal Research Notes (Optional)
-            </label>
-            <textarea
-              rows={2}
-              value={notePersonalNotes}
-              onChange={(e) => setNotePersonalNotes(e.target.value)}
-              maxLength={500}
-              placeholder="Add your own hypotheses, coordinates, or follow-up reminders..."
-              className="w-full px-3.5 py-2 rounded-xl bg-slate-900 border border-slate-700 text-sm text-slate-100 focus:outline-none focus:border-cyan-500"
+            <Input
+              label="Image URL (optional)"
+              type="url"
+              value={noteImageUrl}
+              onChange={(e) => setNoteImageUrl(e.target.value)}
+              placeholder="https://..."
             />
           </div>
 
-          <div className="flex justify-end gap-2 pt-2">
-            <button type="button" onClick={() => { setIsAddNoteOpen(false); setNoteErrors({}); }}
-              className="px-4 py-2 rounded-xl text-xs font-medium border border-slate-700 text-slate-300 hover:text-white">
+          <Input
+            as="textarea"
+            label={<>Observation description <span className="text-signal" aria-hidden="true">*</span></>}
+            rows={3}
+            value={noteDescription}
+            onChange={(e) => { setNoteDescription(e.target.value); setNoteErrors((p) => ({ ...p, description: '' })); }}
+            placeholder="Describe the celestial object, Mars photograph, or mission event..."
+            error={noteErrors.description}
+          />
+
+          <Input
+            as="textarea"
+            label="Personal research notes (optional)"
+            rows={2}
+            value={notePersonalNotes}
+            onChange={(e) => setNotePersonalNotes(e.target.value)}
+            maxLength={500}
+            placeholder="Add your own hypotheses, coordinates, or follow-up reminders..."
+          />
+
+          <div className="flex justify-end gap-2 pt-2 border-t border-line">
+            <Button variant="ghost" size="sm" onClick={() => { setIsAddNoteOpen(false); setNoteErrors({}); }}>
               Cancel
-            </button>
-            <button type="submit" disabled={isSavingNote}
-              className="flex items-center gap-1.5 px-4 py-2 rounded-xl text-xs font-bold bg-cyan-500 text-black shadow-glow-cyan hover:bg-cyan-400 transition">
-              <Save className="w-3.5 h-3.5" />
+            </Button>
+            <Button type="submit" size="sm" icon={Save} disabled={isSavingNote} loading={isSavingNote}>
               {isSavingNote ? 'Saving...' : 'Save Journal Entry'}
-            </button>
+            </Button>
           </div>
         </form>
       </Modal>
@@ -810,9 +875,9 @@ const DashboardPage = () => {
         maxWidth="max-w-2xl"
       >
         {viewFavItem && (
-          <div className="space-y-5">
+          <div className="space-y-6">
             {viewFavItem.imageUrl && (
-              <div className="max-h-80 w-full overflow-hidden rounded-xl bg-black border border-slate-800 flex items-center justify-center">
+              <div className="max-h-80 w-full overflow-hidden bg-ink border border-line flex items-center justify-center">
                 <img
                   src={viewFavItem.imageUrl}
                   alt={viewFavItem.title}
@@ -821,223 +886,201 @@ const DashboardPage = () => {
               </div>
             )}
 
-            <div className="flex items-center justify-between text-xs text-slate-400">
-              <span className="px-2.5 py-1 rounded-lg bg-slate-800 text-cyan-300 font-bold uppercase">
-                Category: {viewFavItem.itemType}
-              </span>
-              <span className="flex items-center gap-1">
-                <Calendar className="w-3.5 h-3.5 text-cyan-400" />
-                Logged on {new Date(viewFavItem.createdAt).toLocaleDateString()}
+            <div className="flex flex-wrap items-center justify-between gap-2">
+              <Tag variant="signal">Category: {viewFavItem.itemType}</Tag>
+              <span className="label text-fg-faint">
+                Logged {new Date(viewFavItem.createdAt).toLocaleDateString()}
               </span>
             </div>
 
             <div>
-              <h4 className="text-xs font-semibold uppercase tracking-wider text-slate-400 mb-1">
-                Discovery Description
-              </h4>
-              <p className="text-sm text-slate-200 leading-relaxed whitespace-pre-line">
+              <h4 className="label mb-2">Discovery description</h4>
+              <p className="text-sm text-fg leading-relaxed whitespace-pre-line">
                 {viewFavItem.description || 'No description provided.'}
               </p>
             </div>
 
-            <div className="p-4 rounded-xl bg-cyan-950/20 border border-cyan-500/30">
-              <h4 className="text-xs font-semibold uppercase tracking-wider text-cyan-400 mb-1">
-                Personal Astronaut Observations
-              </h4>
-              <p className="text-sm text-slate-200 leading-relaxed italic">
+            <div className="border-l border-signal pl-5">
+              <h4 className="label mb-2">Personal observations</h4>
+              <p className="font-display text-2xl leading-snug text-fg italic">
                 {viewFavItem.notes
                   ? `“${viewFavItem.notes}”`
                   : 'No personal observations added yet. Click "Edit Entry" below to record your thoughts.'}
               </p>
             </div>
 
-            <div className="flex justify-end gap-2 pt-2 border-t border-slate-800">
-              <button
-                type="button"
-                onClick={() => setViewFavItem(null)}
-                className="px-4 py-2 rounded-xl text-xs font-medium border border-slate-700 text-slate-300 hover:text-white"
-              >
+            <div className="flex justify-end gap-2 pt-4 border-t border-line">
+              <Button variant="ghost" size="sm" onClick={() => setViewFavItem(null)}>
                 Close
-              </button>
-              <button
-                type="button"
+              </Button>
+              <Button
+                size="sm"
+                icon={Edit3}
                 onClick={() => {
                   const item = viewFavItem;
                   setViewFavItem(null);
                   openEditFav(item);
                 }}
-                className="flex items-center gap-1.5 px-4 py-2 rounded-xl text-xs font-bold bg-cyan-500 text-black shadow-glow-cyan hover:bg-cyan-400 transition"
               >
-                <Edit3 className="w-3.5 h-3.5" />
-                <span>Edit Journal Entry</span>
-              </button>
+                Edit Journal Entry
+              </Button>
             </div>
           </div>
         )}
       </Modal>
 
       {/* Edit Space Journal Entry Modal (UPDATE) */}
-      <Modal isOpen={!!editFavItem} onClose={() => setEditFavItem(null)} title="Edit Space Journal Entry" maxWidth="max-w-lg">
+      <Modal isOpen={!!editFavItem} onClose={() => setEditFavItem(null)} title="Edit journal entry" maxWidth="max-w-lg">
         {editFavItem && (
-          <form onSubmit={handleUpdateFav} className="space-y-4">
-            <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-              <div className="sm:col-span-2">
-                <label className="text-xs font-semibold text-slate-300 block mb-1">Entry Title</label>
-                <input
-                  type="text"
-                  value={editFavTitle}
-                  onChange={(e) => setEditFavTitle(e.target.value)}
-                  required
-                  className="w-full px-3.5 py-2 rounded-xl bg-slate-900 border border-slate-700 text-sm text-slate-100 focus:outline-none focus:border-cyan-500"
-                />
-              </div>
-
-              <div>
-                <label className="text-xs font-semibold text-slate-300 block mb-1">Category</label>
-                <select
-                  value={editFavCategory}
-                  onChange={(e) => setEditFavCategory(e.target.value)}
-                  className="w-full px-3.5 py-2 rounded-xl bg-slate-900 border border-slate-700 text-sm text-slate-100 focus:outline-none focus:border-cyan-500"
-                >
-                  <option value="apod">APOD</option>
-                  <option value="mars">Mars</option>
-                  <option value="launch">Launch</option>
-                  <option value="satellite">Satellite</option>
-                </select>
-              </div>
-            </div>
-
-            <div>
-              <label className="text-xs font-semibold text-slate-300 block mb-1">Description</label>
-              <textarea
-                rows={3}
-                value={editFavDescription}
-                onChange={(e) => setEditFavDescription(e.target.value)}
-                className="w-full px-3.5 py-2 rounded-xl bg-slate-900 border border-slate-700 text-sm text-slate-100 focus:outline-none focus:border-cyan-500"
+          <form onSubmit={handleUpdateFav} className="space-y-6">
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-6">
+              <Input
+                className="sm:col-span-2"
+                label="Entry title"
+                type="text"
+                value={editFavTitle}
+                onChange={(e) => setEditFavTitle(e.target.value)}
+                required
               />
+
+              <Input
+                as="select"
+                label="Category"
+                value={editFavCategory}
+                onChange={(e) => setEditFavCategory(e.target.value)}
+              >
+                <option value="apod">APOD</option>
+                <option value="mars">Mars</option>
+                <option value="launch">Launch</option>
+                <option value="satellite">Satellite</option>
+              </Input>
             </div>
 
+            <Input
+              as="textarea"
+              label="Description"
+              rows={3}
+              value={editFavDescription}
+              onChange={(e) => setEditFavDescription(e.target.value)}
+            />
+
             <div>
-              <label className="text-xs font-semibold text-slate-300 block mb-1">Personal Observations / Notes</label>
-              <textarea
+              <Input
+                as="textarea"
+                label="Personal observations / notes"
                 rows={3}
                 value={editFavNotes}
                 onChange={(e) => setEditFavNotes(e.target.value)}
                 maxLength={500}
                 placeholder="Add your personal observations, thoughts, or research notes..."
-                className="w-full px-3.5 py-2 rounded-xl bg-slate-900 border border-slate-700 text-sm text-slate-100 focus:outline-none focus:border-cyan-500"
               />
-              <p className="text-[10px] text-slate-500 mt-1 text-right">{editFavNotes.length}/500</p>
+              <p className="font-mono text-[0.625rem] text-fg-faint mt-1.5 text-right tabular-nums">{editFavNotes.length}/500</p>
             </div>
 
-            <div className="flex justify-end gap-2 pt-2">
-              <button type="button" onClick={() => setEditFavItem(null)}
-                className="px-4 py-2 rounded-xl text-xs font-medium border border-slate-700 text-slate-300 hover:text-white">
+            <div className="flex justify-end gap-2 pt-2 border-t border-line">
+              <Button variant="ghost" size="sm" onClick={() => setEditFavItem(null)}>
                 Cancel
-              </button>
-              <button type="submit" disabled={isSavingFav}
-                className="px-4 py-2 rounded-xl text-xs font-bold bg-cyan-500 text-black shadow-glow-cyan hover:bg-cyan-400 transition">
+              </Button>
+              <Button type="submit" size="sm" disabled={isSavingFav} loading={isSavingFav}>
                 {isSavingFav ? 'Saving...' : 'Save Changes'}
-              </button>
+              </Button>
             </div>
           </form>
         )}
       </Modal>
 
       {/* Edit Watchlist Item Modal (UPDATE Priority, Reminder & Notes) */}
-      <Modal isOpen={!!editWatchItem} onClose={() => setEditWatchItem(null)} title="Edit Mission Priority & Reminder" maxWidth="max-w-md">
+      <Modal isOpen={!!editWatchItem} onClose={() => setEditWatchItem(null)} title="Mission priority & reminder" maxWidth="max-w-md">
         {editWatchItem && (
-          <form onSubmit={handleUpdateWatch} className="space-y-4">
-            <p className="text-xs text-slate-400">
-              Editing: <span className="text-slate-200 font-bold">{editWatchItem.launchName}</span>
+          <form onSubmit={handleUpdateWatch} className="space-y-6">
+            <p className="font-mono text-[0.6875rem] text-fg-muted">
+              <span className="text-fg-faint uppercase tracking-label">Editing — </span>
+              <span className="text-fg">{editWatchItem.launchName}</span>
             </p>
 
-            <div>
-              <label className="text-xs font-semibold text-slate-300 block mb-2">Mission Priority</label>
-              <div className="flex gap-2">
+            <fieldset>
+              <legend className="label mb-2">Mission priority</legend>
+              <div className="grid grid-cols-3 border border-line">
                 {['high', 'medium', 'low'].map((p) => (
                   <button
                     key={p}
                     type="button"
+                    aria-pressed={editWatchPriority === p}
                     onClick={() => setEditWatchPriority(p)}
-                    className={`flex-1 py-2 rounded-xl text-xs font-bold border transition capitalize ${
-                      editWatchPriority === p
-                        ? priorityColors[p] + ' shadow-sm'
-                        : 'bg-slate-800 text-slate-400 border-slate-700 hover:text-slate-200'
+                    className={`h-10 border font-mono text-[0.625rem] uppercase tracking-label transition-colors ${
+                      editWatchPriority === p ? priorityColors[p] : 'border-transparent text-fg-muted hover:text-fg hover:bg-ink-800'
                     }`}
                   >
-                    <Flag className="w-3 h-3 inline mr-1" />{p}
+                    {p}
                   </button>
                 ))}
               </div>
-            </div>
+            </fieldset>
+
+            <Input
+              as="select"
+              label="Launch reminder"
+              value={editWatchReminder}
+              onChange={(e) => setEditWatchReminder(e.target.value)}
+            >
+              <option value="none">No Reminder</option>
+              <option value="15m">15 Minutes Before Liftoff</option>
+              <option value="1h">1 Hour Before Launch</option>
+              <option value="24h">1 Day (24 Hours) Before Launch</option>
+            </Input>
 
             <div>
-              <label className="text-xs font-semibold text-slate-300 block mb-1">Launch Reminder</label>
-              <select
-                value={editWatchReminder}
-                onChange={(e) => setEditWatchReminder(e.target.value)}
-                className="w-full px-3.5 py-2 rounded-xl bg-slate-900 border border-slate-700 text-sm text-slate-100 focus:outline-none focus:border-cyan-500"
-              >
-                <option value="none">No Reminder</option>
-                <option value="15m">15 Minutes Before Liftoff</option>
-                <option value="1h">1 Hour Before Launch</option>
-                <option value="24h">1 Day (24 Hours) Before Launch</option>
-              </select>
-            </div>
-
-            <div>
-              <label className="text-xs font-semibold text-slate-300 block mb-1">Mission Notes</label>
-              <textarea
+              <Input
+                as="textarea"
+                label="Mission notes"
                 rows={3}
                 value={editWatchNotes}
                 onChange={(e) => setEditWatchNotes(e.target.value)}
                 maxLength={500}
                 placeholder="Add notes about this launch, e.g., expected payload, viewing location..."
-                className="w-full px-3.5 py-2 rounded-xl bg-slate-900 border border-slate-700 text-sm text-slate-100 focus:outline-none focus:border-cyan-500"
               />
-              <p className="text-[10px] text-slate-500 mt-1 text-right">{editWatchNotes.length}/500</p>
+              <p className="font-mono text-[0.625rem] text-fg-faint mt-1.5 text-right tabular-nums">{editWatchNotes.length}/500</p>
             </div>
 
-            <div className="flex justify-end gap-2 pt-2">
-              <button type="button" onClick={() => setEditWatchItem(null)}
-                className="px-4 py-2 rounded-xl text-xs font-medium border border-slate-700 text-slate-300 hover:text-white">
+            <div className="flex justify-end gap-2 pt-2 border-t border-line">
+              <Button variant="ghost" size="sm" onClick={() => setEditWatchItem(null)}>
                 Cancel
-              </button>
-              <button type="submit" disabled={isSavingWatch}
-                className="px-4 py-2 rounded-xl text-xs font-bold bg-cyan-500 text-black shadow-glow-cyan hover:bg-cyan-400 transition">
+              </Button>
+              <Button type="submit" size="sm" disabled={isSavingWatch} loading={isSavingWatch}>
                 {isSavingWatch ? 'Saving...' : 'Update Mission'}
-              </button>
+              </Button>
             </div>
           </form>
         )}
       </Modal>
 
       {/* Delete Confirmation Modal */}
-      <Modal isOpen={!!deleteTarget} onClose={() => setDeleteTarget(null)} title="Confirm Removal" maxWidth="max-w-sm">
+      <Modal isOpen={!!deleteTarget} onClose={() => setDeleteTarget(null)} title="Confirm removal" maxWidth="max-w-sm">
         {deleteTarget && (
-          <div className="space-y-4">
-            <div className="flex items-start gap-3 p-3 rounded-xl bg-rose-500/10 border border-rose-500/20">
-              <AlertTriangle className="w-5 h-5 text-rose-400 flex-shrink-0 mt-0.5" />
-              <p className="text-sm text-slate-200">
+          <div className="space-y-5">
+            <div className="flex items-start gap-3 border-l border-danger pl-4">
+              <AlertTriangle className="w-4 h-4 text-danger flex-shrink-0 mt-0.5" strokeWidth={1.5} aria-hidden="true" />
+              <p className="text-sm text-fg leading-relaxed">
                 Are you sure you want to remove{' '}
-                <span className="font-bold text-white">"{deleteTarget.name}"</span>{' '}
+                <span className="font-display text-lg italic">"{deleteTarget.name}"</span>{' '}
                 from your {deleteTarget.type === 'favorite' ? 'Space Journal' : 'Watchlist'}?
               </p>
             </div>
-            <p className="text-xs text-slate-400">This action cannot be undone.</p>
-            <div className="flex justify-end gap-2 pt-1">
-              <button onClick={() => setDeleteTarget(null)}
-                className="px-4 py-2 rounded-xl text-xs font-medium border border-slate-700 text-slate-300 hover:text-white">
+            <p className="label text-fg-faint">This action cannot be undone.</p>
+            <div className="flex justify-end gap-2 pt-2 border-t border-line">
+              <Button variant="ghost" size="sm" onClick={() => setDeleteTarget(null)}>
                 Cancel
-              </button>
-              <button
+              </Button>
+              <Button
+                variant="danger-solid"
+                size="sm"
+                icon={Trash2}
                 onClick={handleConfirmDelete}
                 disabled={isDeleting}
-                className="px-4 py-2 rounded-xl text-xs font-bold bg-rose-500 text-white hover:bg-rose-600 transition"
+                loading={isDeleting}
               >
                 {isDeleting ? 'Removing...' : 'Yes, Remove'}
-              </button>
+              </Button>
             </div>
           </div>
         )}

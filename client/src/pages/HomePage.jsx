@@ -1,10 +1,31 @@
-import React, { useState, useEffect } from 'react';
-import { Link } from 'react-router-dom';
+import React, { useState, useEffect, Suspense, lazy } from 'react';
+import { motion } from 'framer-motion';
 import { spaceService } from '../services/spaceService';
-import { Orbit, Rocket, Telescope, ArrowRight } from 'lucide-react';
+import { ArrowRight } from 'lucide-react';
+import Button from '../components/common/Button';
+import Ticker from '../components/common/Ticker';
+import FeatureIndex from '../components/home/FeatureIndex';
+import { formatTMinus, formatLat, formatLng } from '../components/home/format';
+
+const EarthGlobe = lazy(() => import('../components/three/EarthGlobe'));
+
+const HEADLINE = [
+  { text: 'Every orbit', className: 'text-fg' },
+  { text: 'on the record.', className: 'italic text-fg-muted' },
+];
+
+const GlobePlaceholder = () => (
+  <div className="w-full h-full flex items-center justify-center" aria-hidden="true">
+    <div className="w-[70%] aspect-square rounded-full border border-line-strong" />
+  </div>
+);
 
 const HomePage = () => {
   const [quickTelemetry, setQuickTelemetry] = useState(null);
+  // Display-only extras for the live ticker (existing endpoints, fail silently)
+  const [nextLaunch, setNextLaunch] = useState(null);
+  const [neoCount, setNeoCount] = useState(null);
+  const [now, setNow] = useState(() => Date.now());
 
   useEffect(() => {
     const fetchQuickData = async () => {
@@ -18,137 +39,138 @@ const HomePage = () => {
     fetchQuickData();
   }, []);
 
+  useEffect(() => {
+    let cancelled = false;
+    spaceService
+      .getUpcomingLaunches()
+      .then((data) => {
+        const upcoming = (data?.launches || [])
+          .filter((l) => l.net && new Date(l.net).getTime() > Date.now())
+          .sort((a, b) => new Date(a.net) - new Date(b.net));
+        if (!cancelled && upcoming[0]) setNextLaunch(upcoming[0]);
+      })
+      .catch(() => {});
+    spaceService
+      .getNeoAsteroids()
+      .then((data) => {
+        if (!cancelled && Array.isArray(data?.asteroids)) setNeoCount(data.asteroids.length);
+      })
+      .catch(() => {});
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
+  // One-second tick for the T-minus readout
+  useEffect(() => {
+    const id = setInterval(() => setNow(Date.now()), 1000);
+    return () => clearInterval(id);
+  }, []);
+
+  const tMinusMs = nextLaunch ? new Date(nextLaunch.net).getTime() - now : null;
+  const hasIss = quickTelemetry && typeof quickTelemetry.latitude === 'number';
+
+  const tickerItems = [
+    hasIss && { label: 'ISS LAT', value: formatLat(quickTelemetry.latitude) },
+    hasIss && { label: 'ISS LON', value: formatLng(quickTelemetry.longitude) },
+    quickTelemetry?.velocity && { label: 'VEL', value: `${Math.round(quickTelemetry.velocity).toLocaleString()} KM/H` },
+    quickTelemetry?.altitude && { label: 'ALT', value: `${Number(quickTelemetry.altitude).toFixed(1)} KM` },
+    tMinusMs > 0 && { label: 'NEXT LAUNCH', value: formatTMinus(tMinusMs), accent: true },
+    nextLaunch && { label: 'MISSION', value: nextLaunch.name },
+    neoCount !== null && { label: 'NEO TRACKED · 7D', value: String(neoCount).padStart(3, '0') },
+    { label: 'NORAD', value: '25544' },
+  ].filter(Boolean);
+
   return (
-    <div className="space-y-24 py-8">
-      {/* Hero Section */}
-      <section className="relative max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 text-center space-y-8 pt-8 sm:pt-16">
-        {/* Glow backdrop */}
-        <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[500px] h-[300px] bg-gradient-to-r from-cyan-500/15 via-indigo-500/15 to-purple-500/15 rounded-full blur-3xl pointer-events-none -z-10" />
+    <div>
+      {/* ── Hero ── */}
+      <section className="relative overflow-hidden border-b border-line">
+        {/* Structural grid backdrop */}
+        <div className="pointer-events-none absolute inset-0 bg-grid-lines bg-[size:calc(100%/12)_100%] opacity-60" aria-hidden="true" />
 
-        {/* Live Status Pill */}
-        <div className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full glass-panel border border-cyan-500/30 text-xs font-mono text-cyan-300 shadow-glow-cyan animate-pulse">
-          <span className="w-2 h-2 rounded-full bg-cyan-400"></span>
-          <span>ORBITAL GATEWAY ACTIVE</span>
-          {quickTelemetry?.velocity && (
-            <span className="text-slate-400">
-              • ISS: {Math.round(quickTelemetry.velocity).toLocaleString()} km/h
-            </span>
-          )}
-        </div>
+        <div className="relative max-w-shell mx-auto px-4 sm:px-6 lg:px-10 lg:min-h-[calc(100svh-3.5rem-2.75rem)] grid grid-cols-12 gap-x-6">
+          {/* Copy column */}
+          <div className="relative z-10 col-span-12 lg:col-span-8 xl:col-span-7 flex flex-col justify-between pt-10 sm:pt-16 lg:pt-20 pb-10 lg:pb-16">
+            <div className="flex flex-wrap items-center gap-x-6 gap-y-2 font-mono text-[0.6875rem] uppercase tracking-label text-fg-muted">
+              <span className="text-signal">Log 25544</span>
+              <span>LEO · ~408 km</span>
+              <span>Incl. 51.64°</span>
+              <span className="hidden sm:inline">Period 92.9 min</span>
+            </div>
 
-        <div className="space-y-4 max-w-4xl mx-auto">
-          <h1 className="text-4xl sm:text-6xl lg:text-7xl font-black text-white tracking-tight leading-none">
-            Interactive Space Exploration &{' '}
-            <span className="bg-gradient-to-r from-cyan-400 via-sky-300 to-indigo-400 bg-clip-text text-transparent">
-              Satellite Tracking
-            </span>
-          </h1>
+            <h1 className="mt-10 sm:mt-14 font-display font-normal text-display-xl">
+              {HEADLINE.map((line, i) => (
+                <span key={line.text} className="block overflow-hidden pb-[0.06em]">
+                  <motion.span
+                    className={`block ${line.className} ${i === 1 ? 'lg:pl-[12%]' : ''}`}
+                    initial={{ y: '105%' }}
+                    animate={{ y: 0 }}
+                    transition={{ duration: 1.1, delay: 0.1 + i * 0.12, ease: [0.16, 1, 0.3, 1] }}
+                  >
+                    {line.text}
+                  </motion.span>
+                </span>
+              ))}
+            </h1>
 
-          <p className="text-base sm:text-xl text-slate-300 max-w-2xl mx-auto leading-relaxed">
-            Monitor the International Space Station in real time, track global rocket launches with live countdowns, and explore NASA's deep space imagery.
-          </p>
-        </div>
+            <motion.div
+              className="mt-10 lg:mt-14 grid sm:grid-cols-[minmax(0,26rem)_auto] gap-8 sm:items-end"
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              transition={{ duration: 0.8, delay: 0.55 }}
+            >
+              <p className="text-[0.95rem] leading-relaxed text-fg-muted">
+                CosmicHorizon logs the International Space Station&apos;s position every 3.5 seconds, beside the global
+                launch manifest, NASA&apos;s image archive and every near-Earth object on approach this week.
+              </p>
+              <div className="flex flex-wrap items-center gap-5">
+                <Button to="/tracker" size="lg" iconRight={ArrowRight}>
+                  Open live tracker
+                </Button>
+                <Button to="/launches" variant="link">
+                  Launch manifest
+                </Button>
+              </div>
+            </motion.div>
+          </div>
 
-        {/* CTA Buttons */}
-        <div className="flex flex-wrap items-center justify-center gap-4 pt-4">
-          <Link
-            to="/tracker"
-            className="flex items-center gap-2 px-6 py-3.5 rounded-xl font-bold text-sm bg-gradient-to-r from-cyan-500 to-indigo-600 text-white shadow-glow-cyan hover:scale-105 transition-all"
+          {/* Globe: offset right and cropped by the viewport edge */}
+          <div
+            className="relative col-span-12 h-[92vw] -mx-4 sm:mx-0 sm:h-[70vw] lg:absolute lg:h-auto lg:right-[-16vw] lg:top-1/2 lg:-translate-y-1/2 lg:w-[62vw] lg:aspect-square xl:right-[-12vw] xl:w-[56vw]"
           >
-            <Orbit className="w-4 h-4 animate-spin" style={{ animationDuration: '8s' }} />
-            <span>Launch Live ISS Tracker</span>
-            <ArrowRight className="w-4 h-4" />
-          </Link>
+            <div className="absolute inset-0 translate-x-[22%] lg:translate-x-0">
+              <Suspense fallback={<GlobePlaceholder />}>
+                <EarthGlobe tone="color" className="w-full h-full" />
+              </Suspense>
+            </div>
 
-          <Link
-            to="/launches"
-            className="flex items-center gap-2 px-6 py-3.5 rounded-xl font-bold text-sm glass-panel border border-slate-700 text-slate-200 hover:text-white hover:border-cyan-500/50 hover:bg-slate-800/80 transition-all"
-          >
-            <Rocket className="w-4 h-4 text-indigo-400" />
-            <span>Upcoming Rocket Launches</span>
-          </Link>
+            {/* Live coordinate callout */}
+            {hasIss && (
+              <div className="absolute left-4 sm:left-0 bottom-6 lg:left-[6%] lg:bottom-[18%] pointer-events-none">
+                <div className="flex items-center gap-3">
+                  <span className="w-10 h-px bg-signal" aria-hidden="true" />
+                  <span className="label text-signal">ISS · now</span>
+                </div>
+                <dl className="mt-2 ml-[3.25rem] grid grid-cols-[2.5rem_auto] gap-y-0.5 font-mono text-[0.6875rem]">
+                  <dt className="text-fg-faint">LAT</dt>
+                  <dd className="text-fg tabular-nums">{formatLat(quickTelemetry.latitude)}</dd>
+                  <dt className="text-fg-faint">LON</dt>
+                  <dd className="text-fg tabular-nums">{formatLng(quickTelemetry.longitude)}</dd>
+                </dl>
+              </div>
+            )}
+          </div>
         </div>
+
+        {/* Bottom rule draws in */}
+        <span className="absolute left-0 bottom-0 h-px w-full bg-line-bright origin-left animate-draw-x" aria-hidden="true" />
       </section>
 
-      {/* Feature Exploration Grid */}
-      <section className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        <div className="text-center max-w-2xl mx-auto mb-12 space-y-2">
-          <h2 className="text-xs font-bold uppercase tracking-widest text-cyan-400">
-            System Modules
-          </h2>
-          <p className="text-3xl font-extrabold text-white">
-            Space Data Architecture at Your Fingertips
-          </p>
-        </div>
+      {/* ── Live ticker ── */}
+      <Ticker items={tickerItems} />
 
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
-          {/* Module 1: ISS Tracker */}
-          <Link
-            to="/tracker"
-            className="glass-panel p-8 rounded-3xl border border-slate-800 glass-panel-hover flex flex-col justify-between group space-y-6"
-          >
-            <div className="space-y-4">
-              <div className="w-12 h-12 rounded-2xl bg-cyan-500/10 border border-cyan-500/20 text-cyan-400 flex items-center justify-center shadow-glow-cyan group-hover:scale-110 transition">
-                <Orbit className="w-6 h-6" />
-              </div>
-              <h3 className="text-xl font-bold text-white group-hover:text-cyan-300 transition">
-                Live Satellite & ISS Telemetry
-              </h3>
-              <p className="text-sm text-slate-400 leading-relaxed">
-                Stream real-time geographic coordinates, ground speed, orbital altitude, and Day/Night illumination of the International Space Station over an interactive Leaflet dark-map.
-              </p>
-            </div>
-            <div className="flex items-center gap-2 text-xs font-semibold text-cyan-400 group-hover:translate-x-1 transition-transform">
-              <span>Launch Tracker HUD</span>
-              <ArrowRight className="w-4 h-4" />
-            </div>
-          </Link>
-
-          {/* Module 2: Upcoming Launches */}
-          <Link
-            to="/launches"
-            className="glass-panel p-8 rounded-3xl border border-slate-800 glass-panel-hover flex flex-col justify-between group space-y-6"
-          >
-            <div className="space-y-4">
-              <div className="w-12 h-12 rounded-2xl bg-indigo-500/10 border border-indigo-500/20 text-indigo-400 flex items-center justify-center shadow-glow-purple group-hover:scale-110 transition">
-                <Rocket className="w-6 h-6" />
-              </div>
-              <h3 className="text-xl font-bold text-white group-hover:text-indigo-300 transition">
-                Global Launch Manifest
-              </h3>
-              <p className="text-sm text-slate-400 leading-relaxed">
-                Filter missions by agency (SpaceX, NASA, Rocket Lab, ULA), monitor countdown timers down to the second, and save upcoming flights to your personal Watchlist.
-              </p>
-            </div>
-            <div className="flex items-center gap-2 text-xs font-semibold text-indigo-400 group-hover:translate-x-1 transition-transform">
-              <span>View Launch Schedules</span>
-              <ArrowRight className="w-4 h-4" />
-            </div>
-          </Link>
-
-          {/* Module 3: NASA Observatory */}
-          <Link
-            to="/nasa"
-            className="glass-panel p-8 rounded-3xl border border-slate-800 glass-panel-hover flex flex-col justify-between group space-y-6"
-          >
-            <div className="space-y-4">
-              <div className="w-12 h-12 rounded-2xl bg-purple-500/10 border border-purple-500/20 text-purple-400 flex items-center justify-center shadow-glow-purple group-hover:scale-110 transition">
-                <Telescope className="w-6 h-6" />
-              </div>
-              <h3 className="text-xl font-bold text-white group-hover:text-purple-300 transition">
-                NASA Deep Space Observatory
-              </h3>
-              <p className="text-sm text-slate-400 leading-relaxed">
-                Inspect Astronomy Picture of the Day (APOD) archives in high definition, filter Martian surface photos from Perseverance and Curiosity, and scan Near-Earth Asteroid trajectories.
-              </p>
-            </div>
-            <div className="flex items-center gap-2 text-xs font-semibold text-purple-400 group-hover:translate-x-1 transition-transform">
-              <span>Open NASA Explorer</span>
-              <ArrowRight className="w-4 h-4" />
-            </div>
-          </Link>
-        </div>
-      </section>
+      {/* ── Feature index ── */}
+      <FeatureIndex telemetry={quickTelemetry} nextLaunch={nextLaunch} tMinusMs={tMinusMs} neoCount={neoCount} />
     </div>
   );
 };
