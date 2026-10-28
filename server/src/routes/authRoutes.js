@@ -3,6 +3,7 @@ import {
   registerUser,
   loginUser,
   verifyEmail,
+  verifyEmailCode,
   resendVerification,
   getUserProfile,
   updateUserProfile,
@@ -14,6 +15,7 @@ const router = express.Router();
 router.post('/register', registerUser);
 router.post('/login', loginUser);
 router.get('/verify/:token', verifyEmail);
+router.post('/verify-code', verifyEmailCode);
 router.post('/resend-verification', resendVerification);
 router.get('/profile', protect, getUserProfile);
 router.put('/profile', protect, updateUserProfile);

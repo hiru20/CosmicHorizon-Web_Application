@@ -3,7 +3,7 @@ import { Link } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { authService } from '../services/authService';
 import { useNotification } from '../context/NotificationContext';
-import { Orbit, UserPlus, Lock, Mail, User, MailCheck } from 'lucide-react';
+import { Orbit, UserPlus, Lock, Mail, User, MailCheck, CheckCircle2 } from 'lucide-react';
 
 const RegisterPage = () => {
   const [name, setName] = useState('');
@@ -19,20 +19,45 @@ const RegisterPage = () => {
   const { register } = useAuth();
   const { notifySuccess, notifyError } = useNotification();
 
-  // Set after a successful sign-up: { email, devLink }
+  // Set after a successful sign-up: { email }
   const [registered, setRegistered] = useState(null);
+  const [otpCode, setOtpCode] = useState('');
+  const [isVerifyingCode, setIsVerifyingCode] = useState(false);
   const [isResending, setIsResending] = useState(false);
 
   const handleResend = async () => {
     setIsResending(true);
     try {
-      const data = await authService.resendVerification(registered.email);
-      setRegistered((prev) => ({ ...prev, devLink: data?.devVerificationLink || prev.devLink }));
-      notifySuccess('A new verification link has been sent.');
+      await authService.resendVerification(registered.email);
+      notifySuccess('A new verification email has been sent to your inbox.');
     } catch (error) {
       notifyError(error.message || 'Could not resend email');
     } finally {
       setIsResending(false);
+    }
+  };
+
+  const handleVerifyCode = async (e) => {
+    e.preventDefault();
+    if (!otpCode.trim() || otpCode.trim().length < 6) {
+      notifyError('Please enter the 6-digit verification code from your email.');
+      return;
+    }
+    setIsVerifyingCode(true);
+    try {
+      const data = await authService.verifyEmailCode(registered.email, otpCode.trim());
+      if (data?.token) {
+        localStorage.setItem('cosmic_token', data.token);
+        notifySuccess('Email verified! Redirecting to your Astronaut Dashboard...');
+        window.location.href = '/dashboard';
+      } else {
+        notifySuccess('Email verified! You can now sign in.');
+        window.location.href = '/login';
+      }
+    } catch (error) {
+      notifyError(error.message || 'Invalid or expired verification code');
+    } finally {
+      setIsVerifyingCode(false);
     }
   };
 
@@ -87,36 +112,48 @@ const RegisterPage = () => {
     if (result.success) {
       setRegistered({
         email: result.data?.email || email,
-        devLink: result.data?.devVerificationLink || '',
       });
     } else {
       setErrorMsg(result.error || 'Registration failed.');
     }
   };
 
-  // After sign-up: ask the user to verify their email
+  // After sign-up: ask the user to verify their email via 6-digit code OR email link
   if (registered) {
     return (
       <div className="min-h-[80vh] flex items-center justify-center px-4 py-12">
-        <div className="w-full max-w-md glass-panel p-8 rounded-3xl border border-slate-800 shadow-2xl text-center space-y-4">
-          <MailCheck className="w-12 h-12 text-cyan-400 mx-auto" />
-          <h2 className="text-2xl font-black text-white">Check Your Email</h2>
-          <p className="text-xs text-slate-400">
-            We sent a verification link to{' '}
-            <span className="text-slate-200 font-bold">{registered.email}</span>. Open it to activate your
-            account, then sign in. The link expires in 24 hours.
+        <div className="w-full max-w-md glass-panel p-8 rounded-3xl border border-slate-800 shadow-2xl text-center space-y-5">
+          <div className="w-12 h-12 rounded-2xl bg-cyan-500/15 border border-cyan-500/30 flex items-center justify-center mx-auto">
+            <MailCheck className="w-7 h-7 text-cyan-400" />
+          </div>
+          <h2 className="text-2xl font-black text-white">Verify Your Email</h2>
+          <p className="text-xs text-slate-400 leading-relaxed">
+            We sent a verification email to{' '}
+            <span className="text-slate-200 font-bold">{registered.email}</span>. Enter the{' '}
+            <b className="text-cyan-300">6-digit verification code</b> from your email below, or click the verification button inside the email.
           </p>
 
-          {registered.devLink && (
-            <div className="p-3 rounded-xl bg-amber-500/10 border border-amber-500/30 text-left">
-              <p className="text-[11px] font-bold text-amber-300 mb-1">Dev mode: email is not configured</p>
-              <a href={registered.devLink} className="text-[11px] text-cyan-400 break-all hover:underline">
-                {registered.devLink}
-              </a>
-            </div>
-          )}
+          <form onSubmit={handleVerifyCode} className="space-y-3 pt-1">
+            <input
+              type="text"
+              inputMode="numeric"
+              maxLength={6}
+              value={otpCode}
+              onChange={(e) => setOtpCode(e.target.value.replace(/\D/g, ''))}
+              placeholder="000000"
+              className="w-full text-center tracking-[0.5em] font-mono text-xl font-bold py-3 rounded-xl bg-slate-900 border border-slate-700 text-cyan-300 placeholder-slate-600 focus:outline-none focus:border-cyan-500"
+            />
+            <button
+              type="submit"
+              disabled={isVerifyingCode || otpCode.length < 6}
+              className="w-full py-3 rounded-xl bg-gradient-to-r from-cyan-500 to-indigo-600 text-white font-bold text-sm shadow-glow-cyan hover:opacity-95 transition disabled:opacity-50 flex items-center justify-center gap-2"
+            >
+              <CheckCircle2 className="w-4 h-4" />
+              <span>{isVerifyingCode ? 'Verifying...' : 'Verify & Activate Account'}</span>
+            </button>
+          </form>
 
-          <div className="flex flex-col gap-2 pt-2">
+          <div className="flex flex-col gap-2 pt-3 border-t border-slate-800">
             <button
               type="button"
               onClick={handleResend}
@@ -125,7 +162,7 @@ const RegisterPage = () => {
             >
               {isResending ? 'Sending...' : 'Resend verification email'}
             </button>
-            <Link to="/login" className="text-xs text-cyan-400 font-bold hover:underline">
+            <Link to="/login" className="text-xs text-cyan-400 font-bold hover:underline pt-1">
               Already verified? Sign in
             </Link>
           </div>

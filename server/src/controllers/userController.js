@@ -29,7 +29,7 @@ export const getFavorites = async (req, res, next) => {
  */
 export const addFavorite = async (req, res, next) => {
   try {
-    const { itemType, itemId, title, imageUrl, description, extraData } = req.body;
+    const { itemType, itemId, title, imageUrl, description, notes, extraData } = req.body;
 
     if (!itemType || !itemId || !title) {
       return errorResponse(res, 'itemType, itemId, and title are required', 400);
@@ -52,6 +52,7 @@ export const addFavorite = async (req, res, next) => {
       title,
       imageUrl: imageUrl || '',
       description: description || '',
+      notes: notes ? notes.trim() : '',
       extraData: extraData || {},
     });
 
@@ -62,26 +63,39 @@ export const addFavorite = async (req, res, next) => {
 };
 
 /**
- * @desc    Update personal notes on a favorite item
+ * @desc    Update a favorite / space journal entry (notes, title, description, itemType, imageUrl)
  * @route   PATCH /api/user/favorites/:id
  * @access  Private
  */
 export const updateFavorite = async (req, res, next) => {
   try {
     const { id } = req.params;
-    const { notes } = req.body;
+    const { notes, title, description, itemType, imageUrl } = req.body;
 
-    if (notes === undefined) {
-      return errorResponse(res, 'notes field is required', 400);
+    if (
+      notes === undefined &&
+      title === undefined &&
+      description === undefined &&
+      itemType === undefined &&
+      imageUrl === undefined
+    ) {
+      return errorResponse(res, 'Provide at least one field to update', 400);
     }
 
-    if (notes.length > 500) {
+    if (notes !== undefined && notes.length > 500) {
       return errorResponse(res, 'Notes cannot exceed 500 characters', 400);
     }
 
+    const updateFields = {};
+    if (notes !== undefined) updateFields.notes = notes.trim();
+    if (title !== undefined && title.trim()) updateFields.title = title.trim();
+    if (description !== undefined) updateFields.description = description.trim();
+    if (itemType !== undefined) updateFields.itemType = itemType;
+    if (imageUrl !== undefined) updateFields.imageUrl = imageUrl.trim();
+
     const favorite = await Favorite.findOneAndUpdate(
       { _id: id, user: req.user._id },
-      { notes: notes.trim() },
+      updateFields,
       { new: true }
     );
 
@@ -89,7 +103,7 @@ export const updateFavorite = async (req, res, next) => {
       return errorResponse(res, 'Favorite item not found', 404);
     }
 
-    return successResponse(res, favorite, 'Favorite notes updated successfully');
+    return successResponse(res, favorite, 'Space journal entry updated successfully');
   } catch (error) {
     next(error);
   }
@@ -144,7 +158,7 @@ export const getWatchlist = async (req, res, next) => {
  */
 export const addToWatchlist = async (req, res, next) => {
   try {
-    const { launchId, launchName, launchDate, agency, rocket, padLocation, status, image } = req.body;
+    const { launchId, launchName, launchDate, agency, rocket, padLocation, status, image, reminderTime } = req.body;
 
     if (!launchId || !launchName || !launchDate) {
       return errorResponse(res, 'launchId, launchName, and launchDate are required', 400);
@@ -169,6 +183,7 @@ export const addToWatchlist = async (req, res, next) => {
       padLocation: padLocation || '',
       status: status || 'Go',
       image: image || '',
+      reminderTime: reminderTime || 'none',
     });
 
     return successResponse(res, item, 'Added to watchlist', 201);
@@ -178,18 +193,23 @@ export const addToWatchlist = async (req, res, next) => {
 };
 
 /**
- * @desc    Update priority and notes on a watchlist item
+ * @desc    Update priority, notes, and reminderTime on a watchlist item
  * @route   PATCH /api/user/watchlist/:id
  * @access  Private
  */
 export const updateWatchlistItem = async (req, res, next) => {
   try {
     const { id } = req.params;
-    const { priority, notes } = req.body;
+    const { priority, notes, reminderTime } = req.body;
 
     const validPriorities = ['high', 'medium', 'low'];
     if (priority && !validPriorities.includes(priority)) {
       return errorResponse(res, 'priority must be high, medium, or low', 400);
+    }
+
+    const validReminders = ['none', '15m', '1h', '24h'];
+    if (reminderTime && !validReminders.includes(reminderTime)) {
+      return errorResponse(res, 'reminderTime must be none, 15m, 1h, or 24h', 400);
     }
 
     if (notes && notes.length > 500) {
@@ -199,16 +219,24 @@ export const updateWatchlistItem = async (req, res, next) => {
     const updateFields = {};
     if (priority !== undefined) updateFields.priority = priority;
     if (notes !== undefined) updateFields.notes = notes.trim();
+    if (reminderTime !== undefined) updateFields.reminderTime = reminderTime;
 
     if (Object.keys(updateFields).length === 0) {
-      return errorResponse(res, 'Provide priority or notes to update', 400);
+      return errorResponse(res, 'Provide priority, notes, or reminderTime to update', 400);
     }
 
-    const item = await Watchlist.findOneAndUpdate(
+    let item = await Watchlist.findOneAndUpdate(
       { _id: id, user: req.user._id },
       updateFields,
       { new: true }
     );
+    if (!item) {
+      item = await Watchlist.findOneAndUpdate(
+        { launchId: id, user: req.user._id },
+        updateFields,
+        { new: true }
+      );
+    }
 
     if (!item) {
       return errorResponse(res, 'Watchlist item not found', 404);
@@ -260,8 +288,8 @@ export const getDashboardSummary = async (req, res, next) => {
     const [totalFavorites, totalWatchlist, recentFavorites, watchlistItems] = await Promise.all([
       Favorite.countDocuments({ user: userId }),
       Watchlist.countDocuments({ user: userId }),
-      Favorite.find({ user: userId }).sort({ createdAt: -1 }).limit(6),
-      Watchlist.find({ user: userId }).sort({ launchDate: 1 }).limit(5),
+      Favorite.find({ user: userId }).sort({ createdAt: -1 }).limit(30),
+      Watchlist.find({ user: userId }).sort({ launchDate: 1 }).limit(20),
     ]);
 
     // Calculate next upcoming launch from user's watchlist

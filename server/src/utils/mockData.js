@@ -242,6 +242,60 @@ export const mockApodData = {
   isFallback: true,
 };
 
+export const mockApodPool = [
+  mockApodData,
+  {
+    date: '2022-07-12',
+    title: 'Cosmic Cliffs in the Carina Nebula (NGC 3324)',
+    explanation: 'What looks like craggy mountains on a moonlit evening is actually the edge of a nearby, young, star-forming region NGC 3324 in the Carina Nebula. Captured in infrared light by the James Webb Space Telescope, this image reveals previously obscured areas of star birth.',
+    url: 'https://images.unsplash.com/photo-1506703719100-a0f3a48c0f86?w=1600&auto=format&fit=crop&q=80',
+    hdurl: 'https://images.unsplash.com/photo-1506703719100-a0f3a48c0f86?w=2400&auto=format&fit=crop&q=80',
+    media_type: 'image',
+    copyright: 'NASA, ESA, CSA, STScI',
+    isFallback: true,
+  },
+  {
+    date: '2021-10-18',
+    title: 'Andromeda Galaxy (M31) in Ultraviolet & Infrared',
+    explanation: 'The most distant object easily visible to the unaided eye is M31, the great Andromeda Galaxy, some two and a half million light-years away. Spanning over 200,000 light-years across, this spiral galaxy contains roughly one trillion stars.',
+    url: 'https://images.unsplash.com/photo-1543722530-d2c3201371e7?w=1600&auto=format&fit=crop&q=80',
+    hdurl: 'https://images.unsplash.com/photo-1543722530-d2c3201371e7?w=2400&auto=format&fit=crop&q=80',
+    media_type: 'image',
+    copyright: 'NASA / JPL-Caltech',
+    isFallback: true,
+  },
+  {
+    date: '2019-04-10',
+    title: 'Supermassive Black Hole in Messier 87',
+    explanation: 'Captured by the Event Horizon Telescope, this historic observation reveals the glowing accretion disk and dark central shadow of the supermassive black hole at the core of elliptical galaxy M87, located 55 million light-years from Earth.',
+    url: 'https://images.unsplash.com/photo-1446776811953-b23d57bd21aa?w=1600&auto=format&fit=crop&q=80',
+    hdurl: 'https://images.unsplash.com/photo-1446776811953-b23d57bd21aa?w=2400&auto=format&fit=crop&q=80',
+    media_type: 'image',
+    copyright: 'Event Horizon Telescope Collaboration',
+    isFallback: true,
+  },
+  {
+    date: '2017-09-15',
+    title: 'Cassini Grand Finale: Saturn’s Rings in Shadow',
+    explanation: 'Before plunging into Saturn’s atmosphere, the Cassini spacecraft captured this sweeping mosaic of Saturn and its intricate ring system illuminated by sunlight scattering through ice particles.',
+    url: 'https://images.unsplash.com/photo-1614732414444-096e5f1122d5?w=1600&auto=format&fit=crop&q=80',
+    hdurl: 'https://images.unsplash.com/photo-1614732414444-096e5f1122d5?w=2400&auto=format&fit=crop&q=80',
+    media_type: 'image',
+    copyright: 'NASA / JPL-Caltech / Space Science Institute',
+    isFallback: true,
+  },
+  {
+    date: '2015-05-04',
+    title: 'The Veil Nebula Supernova Remnant',
+    explanation: 'Wisps of ionized oxygen, sulfur, and hydrogen glow across the Cygnus Loop, the expanding shockwave from a massive star that exploded roughly 10,000 years ago.',
+    url: 'https://images.unsplash.com/photo-1419242902214-272b3f66ee7a?w=1600&auto=format&fit=crop&q=80',
+    hdurl: 'https://images.unsplash.com/photo-1419242902214-272b3f66ee7a?w=2400&auto=format&fit=crop&q=80',
+    media_type: 'image',
+    copyright: 'NASA, ESA, Hubble Heritage Team',
+    isFallback: true,
+  },
+];
+
 export const mockMarsData = [
   {
     id: 102685,
@@ -303,7 +357,7 @@ export const mockMarsData = [
 ];
 
 export const mockNeoData = {
-  element_count: 3,
+  element_count: 6,
   near_earth_objects: [
     {
       id: '2021201',
@@ -347,6 +401,98 @@ export const mockNeoData = {
           },
           relative_velocity: {
             kilometers_per_hour: '42180.1',
+          },
+        },
+      ],
+    },
+    {
+      id: '2099942',
+      name: '99942 Apophis (2004 MN4)',
+      absolute_magnitude_h: 19.7,
+      estimated_diameter: {
+        kilometers: {
+          estimated_diameter_min: 0.31,
+          estimated_diameter_max: 0.68,
+        },
+      },
+      is_potentially_hazardous_asteroid: true,
+      close_approach_data: [
+        {
+          close_approach_date: new Date(Date.now() + 86400000).toISOString().split('T')[0],
+          miss_distance: {
+            kilometers: '3801200',
+          },
+          relative_velocity: {
+            kilometers_per_hour: '26740.8',
+          },
+        },
+      ],
+    },
+    {
+      id: '2101955',
+      name: '101955 Bennu (1999 RQ36)',
+      absolute_magnitude_h: 20.19,
+      estimated_diameter: {
+        kilometers: {
+          estimated_diameter_min: 0.44,
+          estimated_diameter_max: 0.56,
+        },
+      },
+      is_potentially_hazardous_asteroid: true,
+      close_approach_data: [
+        {
+          close_approach_date: new Date(Date.now() + 172800000).toISOString().split('T')[0],
+          miss_distance: {
+            kilometers: '12450800',
+          },
+          relative_velocity: {
+            kilometers_per_hour: '22680.0',
+          },
+        },
+      ],
+    },
+    {
+      id: '3759353',
+      name: '(2016 RB1)',
+      absolute_magnitude_h: 28.3,
+      estimated_diameter: {
+        kilometers: {
+          estimated_diameter_min: 0.007,
+          estimated_diameter_max: 0.016,
+        },
+      },
+      is_potentially_hazardous_asteroid: false,
+      close_approach_data: [
+        {
+          close_approach_date: new Date().toISOString().split('T')[0],
+          miss_distance: {
+            kilometers: '1492000',
+          },
+          relative_velocity: {
+            kilometers_per_hour: '29510.5',
+          },
+        },
+      ],
+    },
+    {
+      id: '2162173',
+      name: '162173 Ryugu (1999 JU3)',
+      absolute_magnitude_h: 19.2,
+      estimated_diameter: {
+        kilometers: {
+          estimated_diameter_min: 0.85,
+          estimated_diameter_max: 0.98,
+        },
+      },
+      is_potentially_hazardous_asteroid: false,
+      close_approach_data: [
+        {
+          close_approach_date: new Date(Date.now() + 259200000).toISOString().split('T')[0],
+          miss_distance: {
+            kilometers: '18940000',
+          },
+          relative_velocity: {
+            kilometers_per_hour: '31200.0',
           },
         },
       ],

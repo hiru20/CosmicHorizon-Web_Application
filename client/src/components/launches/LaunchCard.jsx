@@ -1,9 +1,22 @@
 import React from 'react';
-import { Rocket, MapPin, Calendar, Bookmark, BookmarkCheck, ExternalLink, Info } from 'lucide-react';
+import { Rocket, MapPin, Calendar, Bookmark, BookmarkCheck, Info, Bell, BellRing } from 'lucide-react';
 import CountdownTimer from './CountdownTimer';
 import Badge from '../common/Badge';
 
-const LaunchCard = ({ launch, isInWatchlist, onToggleWatchlist, onSelectDetails }) => {
+const REMINDER_LABELS = {
+  '15m': '15m before',
+  '1h': '1h before',
+  '24h': '1d before',
+};
+
+const LaunchCard = ({
+  launch,
+  isInWatchlist,
+  reminderTime,
+  onToggleWatchlist,
+  onOpenReminder,
+  onSelectDetails,
+}) => {
   const getStatusVariant = (statusName) => {
     const s = (statusName || '').toLowerCase();
     if (s.includes('go')) return 'go';
@@ -23,6 +36,8 @@ const LaunchCard = ({ launch, isInWatchlist, onToggleWatchlist, onSelectDetails 
       })
     : 'Date TBD';
 
+  const hasReminder = reminderTime && reminderTime !== 'none';
+
   return (
     <div className="glass-panel rounded-2xl overflow-hidden border border-slate-800 glass-panel-hover flex flex-col justify-between group">
       {/* Top Banner / Image */}
@@ -39,26 +54,48 @@ const LaunchCard = ({ launch, isInWatchlist, onToggleWatchlist, onSelectDetails 
 
         {/* Top Floating Badges */}
         <div className="absolute top-3 left-3 right-3 flex items-center justify-between">
-          <Badge variant={getStatusVariant(launch.status?.name)}>
-            {launch.status?.name || 'Pending'}
-          </Badge>
-
-          {/* Watchlist Toggle */}
-          <button
-            onClick={() => onToggleWatchlist(launch)}
-            className={`p-2 rounded-xl backdrop-blur-md transition-all shadow-lg ${
-              isInWatchlist
-                ? 'bg-cyan-500 text-black shadow-glow-cyan'
-                : 'bg-black/50 text-slate-300 hover:text-white hover:bg-black/70'
-            }`}
-            title={isInWatchlist ? 'Remove from Watchlist' : 'Add to Watchlist'}
-          >
-            {isInWatchlist ? (
-              <BookmarkCheck className="w-4 h-4 fill-black" />
-            ) : (
-              <Bookmark className="w-4 h-4" />
+          <div className="flex items-center gap-1.5">
+            <Badge variant={getStatusVariant(launch.status?.name)}>
+              {launch.status?.name || 'Pending'}
+            </Badge>
+            {hasReminder && (
+              <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold bg-amber-500/20 text-amber-300 border border-amber-500/40 backdrop-blur-md">
+                <BellRing className="w-3 h-3" />
+                {REMINDER_LABELS[reminderTime] || reminderTime}
+              </span>
             )}
-          </button>
+          </div>
+
+          {/* Action Icons: Remind Me + Watchlist Toggle */}
+          <div className="flex items-center gap-1.5">
+            <button
+              onClick={() => onOpenReminder && onOpenReminder(launch)}
+              className={`p-2 rounded-xl backdrop-blur-md transition-all shadow-lg ${
+                hasReminder
+                  ? 'bg-amber-500 text-black'
+                  : 'bg-black/50 text-slate-300 hover:text-white hover:bg-black/70'
+              }`}
+              title={hasReminder ? `Reminder set (${REMINDER_LABELS[reminderTime]})` : 'Set Launch Reminder'}
+            >
+              {hasReminder ? <BellRing className="w-4 h-4" /> : <Bell className="w-4 h-4" />}
+            </button>
+
+            <button
+              onClick={() => onToggleWatchlist(launch)}
+              className={`p-2 rounded-xl backdrop-blur-md transition-all shadow-lg ${
+                isInWatchlist
+                  ? 'bg-cyan-500 text-black shadow-glow-cyan'
+                  : 'bg-black/50 text-slate-300 hover:text-white hover:bg-black/70'
+              }`}
+              title={isInWatchlist ? 'Remove from Watchlist' : 'Add to Watchlist'}
+            >
+              {isInWatchlist ? (
+                <BookmarkCheck className="w-4 h-4 fill-black" />
+              ) : (
+                <Bookmark className="w-4 h-4" />
+              )}
+            </button>
+          </div>
         </div>
 
         {/* Launch Provider Agency */}
@@ -101,13 +138,25 @@ const LaunchCard = ({ launch, isInWatchlist, onToggleWatchlist, onSelectDetails 
         <div className="pt-3 border-t border-slate-800 flex items-center justify-between gap-2">
           <CountdownTimer targetDate={launch.net} />
 
-          <button
-            onClick={() => onSelectDetails(launch)}
-            className="flex items-center gap-1 text-xs font-medium text-slate-300 hover:text-cyan-400 transition"
-          >
-            <span>Details</span>
-            <Info className="w-3.5 h-3.5" />
-          </button>
+          <div className="flex items-center gap-3">
+            <button
+              onClick={() => onOpenReminder && onOpenReminder(launch)}
+              className={`flex items-center gap-1 text-xs font-medium transition ${
+                hasReminder ? 'text-amber-400 hover:text-amber-300' : 'text-slate-400 hover:text-amber-400'
+              }`}
+            >
+              <Bell className="w-3.5 h-3.5" />
+              <span>{hasReminder ? 'Reminder On' : 'Remind Me'}</span>
+            </button>
+
+            <button
+              onClick={() => onSelectDetails(launch)}
+              className="flex items-center gap-1 text-xs font-medium text-slate-300 hover:text-cyan-400 transition"
+            >
+              <span>Details</span>
+              <Info className="w-3.5 h-3.5" />
+            </button>
+          </div>
         </div>
       </div>
     </div>

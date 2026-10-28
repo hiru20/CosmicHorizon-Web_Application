@@ -17,7 +17,7 @@ const Footer = () => {
               </span>
             </div>
             <p className="text-sm text-slate-400 max-w-md leading-relaxed">
-              Interactive Space Exploration and Satellite Tracking Web Application. Built as a University Web Application Development project demonstrating real-time telemetry, asynchronous RESTful APIs, and full-stack architecture.
+              Interactive space exploration and orbital telemetry platform providing real-time satellite tracking, global launch schedules, and deep-space observatory archives.
             </p>
             <div className="flex items-center gap-2 text-xs text-emerald-400 font-mono">
               <span className="w-2 h-2 rounded-full bg-emerald-400 animate-ping"></span>
@@ -78,9 +78,9 @@ const Footer = () => {
         </div>
 
         <div className="pt-8 border-t border-slate-800/60 flex flex-col sm:flex-row items-center justify-between text-xs text-slate-500 gap-4">
-          <p>© {new Date().getFullYear()} CosmicHorizon Project. University Web Application Development.</p>
+          <p>© {new Date().getFullYear()} CosmicHorizon. All rights reserved.</p>
           <p className="flex items-center gap-1">
-            Engineered with React, Node.js, Express, Tailwind CSS & MongoDB
+            Powered by NASA Open Data, Launch Library 2 &amp; Orbital Telemetry Networks
           </p>
         </div>
       </div>

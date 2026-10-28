@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { spaceService } from '../services/spaceService';
-import { Orbit, Rocket, Telescope, Compass, ArrowRight, ShieldCheck, Database, Server, Radio, Sparkles } from 'lucide-react';
+import { Orbit, Rocket, Telescope, ArrowRight } from 'lucide-react';
 
 const HomePage = () => {
   const [quickTelemetry, setQuickTelemetry] = useState(null);
@@ -147,65 +147,6 @@ const HomePage = () => {
               <ArrowRight className="w-4 h-4" />
             </div>
           </Link>
-        </div>
-      </section>
-
-      {/* University Viva & Architecture Highlights */}
-      <section className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        <div className="glass-panel p-8 sm:p-12 rounded-3xl border border-slate-800 space-y-8">
-          <div className="max-w-3xl space-y-3">
-            <span className="text-xs font-bold uppercase tracking-wider text-cyan-400 font-mono">
-              Academic & Architecture Justification
-            </span>
-            <h2 className="text-2xl sm:text-3xl font-black text-white">
-              Engineered with High-Reliability Full-Stack Standards
-            </h2>
-            <p className="text-sm text-slate-300 leading-relaxed">
-              Designed specifically for university examination and real-world deployment, CosmicHorizon emphasizes separation of concerns, secure stateless authentication, and resilient proxy services.
-            </p>
-          </div>
-
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 pt-4 border-t border-slate-800/80">
-            <div className="space-y-2">
-              <div className="flex items-center gap-2 text-cyan-400 font-bold text-sm">
-                <Server className="w-4 h-4" />
-                <span>Backend Gateway</span>
-              </div>
-              <p className="text-xs text-slate-400 leading-relaxed">
-                Express server acts as an API Proxy to hide private NASA keys and implement in-memory caching to prevent rate-limit 429 errors.
-              </p>
-            </div>
-
-            <div className="space-y-2">
-              <div className="flex items-center gap-2 text-indigo-400 font-bold text-sm">
-                <ShieldCheck className="w-4 h-4" />
-                <span>JWT Authentication</span>
-              </div>
-              <p className="text-xs text-slate-400 leading-relaxed">
-                Bcrypt password hashing with salt rounds, Bearer token verification middleware, and protected endpoints.
-              </p>
-            </div>
-
-            <div className="space-y-2">
-              <div className="flex items-center gap-2 text-emerald-400 font-bold text-sm">
-                <Database className="w-4 h-4" />
-                <span>MongoDB Persistence</span>
-              </div>
-              <p className="text-xs text-slate-400 leading-relaxed">
-                Mongoose collections for users, custom bookmarks, and launch watchlists with compound unique indexing.
-              </p>
-            </div>
-
-            <div className="space-y-2">
-              <div className="flex items-center gap-2 text-purple-400 font-bold text-sm">
-                <Sparkles className="w-4 h-4" />
-                <span>Modern React 19 UI</span>
-              </div>
-              <p className="text-xs text-slate-400 leading-relaxed">
-                Vite build system, Tailwind CSS space theming, custom Leaflet orbital mapping, and real-time state contexts.
-              </p>
-            </div>
-          </div>
         </div>
       </section>
     </div>

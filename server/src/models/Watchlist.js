@@ -51,6 +51,11 @@ const watchlistSchema = new mongoose.Schema(
       default: '',
       maxlength: 500,
     },
+    reminderTime: {
+      type: String,
+      enum: ['none', '15m', '1h', '24h'],
+      default: 'none',
+    },
   },
   {
     timestamps: true,

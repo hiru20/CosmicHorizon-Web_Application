@@ -5,7 +5,7 @@ import { useAuth } from '../../context/AuthContext';
 import { useNotification } from '../../context/NotificationContext';
 import Loader from '../common/Loader';
 import Modal from '../common/Modal';
-import { Calendar, Heart, Maximize2, Share2, Sparkles, ExternalLink } from 'lucide-react';
+import { Calendar, Heart, Maximize2, Share2, Sparkles, ExternalLink, Shuffle } from 'lucide-react';
 
 const ApodViewer = ({ isFavorited, onToggleFavorite }) => {
   const { isAuthenticated } = useAuth();
@@ -15,6 +15,16 @@ const ApodViewer = ({ isFavorited, onToggleFavorite }) => {
   const [apod, setApod] = useState(null);
   const [loading, setLoading] = useState(true);
   const [showHdModal, setShowHdModal] = useState(false);
+
+  // Generate a random date between 1995-06-16 (APOD launch) and today
+  const handleSurpriseMe = () => {
+    const start = new Date('1995-06-16').getTime();
+    const end = Date.now();
+    const randomTime = start + Math.floor(Math.random() * (end - start));
+    const randomDate = new Date(randomTime).toISOString().split('T')[0];
+    setDate(randomDate);
+    notifyInfo(`Surprise Discovery! Jumping to ${randomDate}...`);
+  };
 
   useEffect(() => {
     const fetchApod = async () => {
@@ -60,6 +70,14 @@ const ApodViewer = ({ isFavorited, onToggleFavorite }) => {
             className="px-3 py-1.5 rounded-xl text-xs font-medium border border-slate-700 text-slate-300 hover:text-white hover:bg-slate-800 transition"
           >
             Today
+          </button>
+          <button
+            onClick={handleSurpriseMe}
+            className="flex items-center gap-1.5 px-3.5 py-1.5 rounded-xl text-xs font-bold bg-gradient-to-r from-cyan-500 to-indigo-600 text-white shadow-glow-cyan hover:opacity-95 transition"
+            title="Discover a random historical Astronomy Picture of the Day"
+          >
+            <Shuffle className="w-3.5 h-3.5" />
+            <span>Surprise Me</span>
           </button>
         </div>
       </div>

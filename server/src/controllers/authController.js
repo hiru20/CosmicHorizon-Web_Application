@@ -14,10 +14,20 @@ const hashToken = (token) => crypto.createHash('sha256').update(token).digest('h
  */
 const issueVerification = async (user) => {
   const rawToken = crypto.randomBytes(32).toString('hex');
+  const otpCode = String(crypto.randomInt(100000, 1000000));
   user.verificationToken = hashToken(rawToken);
+  user.verificationCode = hashToken(otpCode);
   user.verificationExpires = new Date(Date.now() + VERIFICATION_HOURS * 60 * 60 * 1000);
   await user.save();
-  return sendVerificationEmail(user, rawToken);
+
+  const clientUrl = (process.env.CLIENT_URL || 'http://localhost:5173').replace(/\/$/, '');
+  const fallbackLink = `${clientUrl}/verify-email/${rawToken}`;
+  try {
+    return await sendVerificationEmail(user, rawToken, otpCode);
+  } catch (mailError) {
+    console.error('[Email] Failed to send verification email:', mailError.message);
+    return { sent: false, devLink: fallbackLink, mailError: mailError.message };
+  }
 };
 
 /**
@@ -51,20 +61,19 @@ export const registerUser = async (req, res, next) => {
       isVerified: false,
     });
 
-    let emailResult = { sent: false };
-    try {
-      emailResult = await issueVerification(user);
-    } catch (mailError) {
-      console.error('[Email] Failed to send verification email:', mailError.message);
-    }
+    const emailResult = await issueVerification(user);
 
     const data = {
       email: user.email,
       requiresVerification: true,
+      emailSent: !!emailResult.sent,
     };
     // Dev convenience only: expose the link when SMTP is not configured
     if (emailResult.devLink && process.env.NODE_ENV !== 'production') {
       data.devVerificationLink = emailResult.devLink;
+    }
+    if (emailResult.mailError && process.env.NODE_ENV !== 'production') {
+      data.mailError = emailResult.mailError;
     }
 
     return successResponse(
@@ -96,10 +105,79 @@ export const verifyEmail = async (req, res, next) => {
 
     user.isVerified = true;
     user.verificationToken = undefined;
+    user.verificationCode = undefined;
     user.verificationExpires = undefined;
     await user.save();
 
-    return successResponse(res, { email: user.email }, 'Email verified successfully. You can now log in.');
+    const token = generateToken(user._id);
+
+    return successResponse(
+      res,
+      {
+        email: user.email,
+        token,
+        user: {
+          id: user._id,
+          name: user.name,
+          email: user.email,
+          avatar: user.avatar,
+          bio: user.bio,
+          createdAt: user.createdAt,
+        },
+      },
+      'Email verified successfully. You are now signed in!'
+    );
+  } catch (error) {
+    next(error);
+  }
+};
+
+/**
+ * @desc    Verify email address using the 6-digit OTP code sent via email
+ * @route   POST /api/auth/verify-code
+ * @access  Public
+ */
+export const verifyEmailCode = async (req, res, next) => {
+  try {
+    const { email, code } = req.body;
+    if (!email || !code) {
+      return errorResponse(res, 'Please provide both email and 6-digit verification code', 400);
+    }
+
+    const user = await User.findOne({
+      email: email.toLowerCase().trim(),
+      verificationCode: hashToken(String(code).trim()),
+      verificationExpires: { $gt: new Date() },
+    }).select('+verificationCode +verificationExpires');
+
+    if (!user) {
+      return errorResponse(res, 'Invalid or expired verification code', 400);
+    }
+
+    user.isVerified = true;
+    user.verificationToken = undefined;
+    user.verificationCode = undefined;
+    user.verificationExpires = undefined;
+    await user.save();
+
+    const token = generateToken(user._id);
+
+    return successResponse(
+      res,
+      {
+        email: user.email,
+        token,
+        user: {
+          id: user._id,
+          name: user.name,
+          email: user.email,
+          avatar: user.avatar,
+          bio: user.bio,
+          createdAt: user.createdAt,
+        },
+      },
+      'Email verified successfully!'
+    );
   } catch (error) {
     next(error);
   }

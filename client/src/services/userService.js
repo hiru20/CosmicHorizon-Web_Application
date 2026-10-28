@@ -20,8 +20,9 @@ export const userService = {
     return response.data;
   },
 
-  async updateFavorite(id, notes) {
-    const response = await api.patch(`/user/favorites/${id}`, { notes });
+  async updateFavorite(id, updateData) {
+    const payload = typeof updateData === 'string' ? { notes: updateData } : updateData;
+    const response = await api.patch(`/user/favorites/${id}`, payload);
     return response.data;
   },
 

@@ -1,5 +1,5 @@
 import axios from 'axios';
-import { mockApodData, mockMarsData, mockNeoData } from '../utils/mockData.js';
+import { mockApodData, mockApodPool, mockMarsData, mockNeoData } from '../utils/mockData.js';
 
 const apodCache = new Map();
 const marsCache = new Map();
@@ -33,9 +33,15 @@ export const getApod = async (date) => {
     return data;
   } catch (error) {
     console.warn(`[NASA Service Warning] APOD fetch failed (${error.message}). Serving fallback APOD.`);
+    // Pick a deterministic or varied item from mockApodPool based on the requested date
+    let picked = mockApodData;
+    if (date && Array.isArray(mockApodPool) && mockApodPool.length > 0) {
+      const hash = date.split('').reduce((acc, ch) => acc + ch.charCodeAt(0), 0);
+      picked = mockApodPool[hash % mockApodPool.length];
+    }
     return {
-      ...mockApodData,
-      date: date || mockApodData.date,
+      ...picked,
+      date: date || picked.date,
       isLive: false,
     };
   }

@@ -45,6 +45,10 @@ const userSchema = new mongoose.Schema(
       type: String, // SHA-256 hash of the token emailed to the user
       select: false,
     },
+    verificationCode: {
+      type: String, // SHA-256 hash of the 6-digit OTP code emailed to the user
+      select: false,
+    },
     verificationExpires: {
       type: Date,
       select: false,
