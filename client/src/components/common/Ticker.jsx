@@ -20,13 +20,13 @@ const Ticker = ({ items = [], className = '', ariaLabel = 'Live telemetry' }) =>
   );
 
   return (
-    <section aria-label={ariaLabel} className={`group relative border-y border-line bg-ink overflow-hidden ${className}`}>
+    <section aria-label={ariaLabel} className={`group relative border-y border-line bg-ink/70 backdrop-blur-sm overflow-hidden ${className}`}>
       <div className="flex w-max animate-marquee group-hover:[animation-play-state:paused] group-focus-within:[animation-play-state:paused] motion-reduce:animate-none motion-reduce:w-full motion-reduce:overflow-x-auto">
         {row(false)}
         {row(true)}
       </div>
-      <div className="pointer-events-none absolute inset-y-0 left-0 w-16 bg-gradient-to-r from-black to-transparent" aria-hidden="true" />
-      <div className="pointer-events-none absolute inset-y-0 right-0 w-16 bg-gradient-to-l from-black to-transparent" aria-hidden="true" />
+      <div className="pointer-events-none absolute inset-y-0 left-0 w-16 bg-gradient-to-r from-ink to-transparent" aria-hidden="true" />
+      <div className="pointer-events-none absolute inset-y-0 right-0 w-16 bg-gradient-to-l from-ink to-transparent" aria-hidden="true" />
     </section>
   );
 };

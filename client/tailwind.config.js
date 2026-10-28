@@ -7,44 +7,55 @@ export default {
   theme: {
     extend: {
       colors: {
-        // Flat tonal surfaces: black base, three raised steps
+        // Tonal surfaces: black-blue base, three raised blue steps
         ink: {
-          DEFAULT: '#000000',
-          900: '#0A0A0A',
-          800: '#111111',
-          700: '#181818',
+          DEFAULT: '#050A16',
+          900: '#0A1428',
+          800: '#0F1C38',
+          700: '#152648',
         },
-        // Hairlines that carry the structure
+        // Hairlines that carry the structure (blue)
         line: {
-          DEFAULT: '#1F1F1F',
-          strong: '#2A2A2A',
-          bright: '#3D3D3D',
+          DEFAULT: '#172A4D',
+          strong: '#21396A',
+          bright: '#33528F',
         },
-        // Text: primary / secondary (AA on black) / tertiary (decorative & large only)
+        // Text: primary / secondary (AA on black-blue) / tertiary (decorative & large only)
         fg: {
-          DEFAULT: '#EDEDED',
-          muted: '#8A8A8A',
-          faint: '#555555',
+          DEFAULT: '#EEF4FF',
+          muted: '#9FB3D6',
+          faint: '#5C7299',
         },
-        // The single accent: signal orange
+        // Blue scale for backgrounds, highlights and data
+        azure: {
+          950: '#030712',
+          900: '#0B1B3F',
+          800: '#102A63',
+          700: '#1D4ED8',
+          500: '#3B82F6',
+          400: '#60A5FA',
+          300: '#93C5FD',
+        },
+        // Accent: warm signal orange, with a lighter amber for gradients
         signal: {
-          DEFAULT: '#FF5A1F',
-          hover: '#FF7646',
-          dim: 'rgba(255, 90, 31, 0.10)',
-          line: 'rgba(255, 90, 31, 0.45)',
+          DEFAULT: '#FF8A4C',
+          hover: '#FFA066',
+          light: '#FFC062',
+          dim: 'rgba(255, 138, 76, 0.12)',
+          line: 'rgba(255, 138, 76, 0.5)',
         },
         live: '#5FB57E', // muted green: "live/online" dot only
         danger: '#E5484D', // muted red: errors / hazard only
         // Legacy keys still referenced by untouched markup, remapped to the new palette
         space: {
-          darkest: '#000000',
-          dark: '#0A0A0A',
-          card: '#111111',
-          border: '#1F1F1F',
-          accent: '#FF5A1F',
-          purple: '#8A8A8A',
-          neon: '#FF5A1F',
-          glow: '#FF5A1F',
+          darkest: '#050A16',
+          dark: '#0A1428',
+          card: '#0F1C38',
+          border: '#172A4D',
+          accent: '#FF8A4C',
+          purple: '#9FB3D6',
+          neon: '#FF8A4C',
+          glow: '#FF8A4C',
         },
       },
       fontFamily: {
@@ -64,9 +75,10 @@ export default {
         wide2: '0.24em',
       },
       borderRadius: {
-        DEFAULT: '2px',
-        sm: '2px',
-        md: '3px',
+        DEFAULT: '4px',
+        sm: '4px',
+        md: '6px',
+        btn: '0.75rem',
       },
       spacing: {
         gutter: '1rem',

@@ -175,8 +175,8 @@ const MarsGallery = ({ isPhotoFavorited, onToggleFavorite }) => {
                   title="Save to Favorites"
                   className={`absolute top-2 right-2 h-8 w-8 flex items-center justify-center border transition-[opacity,colors] duration-200 ${
                     isFav
-                      ? 'opacity-100 bg-signal border-signal text-black'
-                      : 'opacity-0 group-hover:opacity-100 focus-visible:opacity-100 bg-black/80 border-line-bright text-fg hover:border-fg-muted'
+                      ? 'opacity-100 btn-gradient rounded-btn'
+                      : 'opacity-0 group-hover:opacity-100 focus-visible:opacity-100 bg-ink/80 border-line-bright text-fg hover:border-fg-muted'
                   }`}
                 >
                   <FavIcon className="w-3.5 h-3.5" strokeWidth={1.5} />

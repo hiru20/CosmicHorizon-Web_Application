@@ -15,8 +15,8 @@ const SaveToggle = ({ saved, onClick, savedLabel = 'Saved', label = 'Save to fav
       aria-pressed={!!saved}
       className={`inline-flex items-center font-mono text-[0.6875rem] uppercase tracking-label border transition-colors duration-200 active:translate-y-px ${sizing} ${
         saved
-          ? 'bg-signal border-signal text-black hover:bg-signal-hover'
-          : 'bg-black/70 border-line-bright text-fg hover:border-fg-muted'
+          ? 'btn-gradient rounded-btn'
+          : 'bg-ink/70 border-line-bright text-fg hover:border-fg-muted'
       } ${className}`}
     >
       <Icon className="w-3.5 h-3.5 flex-shrink-0" strokeWidth={1.5} aria-hidden="true" />

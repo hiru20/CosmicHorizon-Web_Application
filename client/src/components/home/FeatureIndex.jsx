@@ -94,7 +94,7 @@ const FeatureIndex = ({ telemetry, nextLaunch, tMinusMs, neoCount }) => (
             loading="lazy"
             className="img-mono absolute inset-0 w-full h-full object-cover object-[28%_40%] scale-[1.6] group-hover:scale-[1.66]"
           />
-          <div className="absolute inset-0 bg-gradient-to-t from-black via-black/40 to-transparent" aria-hidden="true" />
+          <div className="absolute inset-0 bg-gradient-to-t from-ink via-ink/40 to-transparent" aria-hidden="true" />
           <div className="relative h-full flex flex-col justify-between gap-10 p-6 sm:p-8">
             <div className="flex items-start justify-between">
               <span className="font-mono text-[0.6875rem] text-fg-muted group-hover:text-signal transition-colors">02</span>

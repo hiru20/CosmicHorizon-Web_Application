@@ -17,8 +17,8 @@ const WatchToggle = ({ pressed, onClick, labelOn = 'Tracking', labelOff = 'Track
       whileTap={{ scale: 0.95 }}
       animate={{ scale: pressed ? [1, 1.05, 1] : 1 }}
       transition={{ duration: 0.25, ease: 'easeOut' }}
-      className={`inline-flex items-center gap-2 ${sizing} border font-mono text-[0.6875rem] font-medium uppercase tracking-label transition-colors duration-200 ${
-        pressed ? 'bg-signal border-signal text-black hover:bg-signal-hover' : 'border-line-strong text-fg hover:border-fg-muted'
+      className={`inline-flex items-center gap-2 ${sizing} rounded-btn border font-mono text-[0.6875rem] font-medium uppercase tracking-label transition-colors duration-200 ${
+        pressed ? 'btn-gradient' : 'btn-gradient-soft'
       } ${className}`}
       {...props}
     >

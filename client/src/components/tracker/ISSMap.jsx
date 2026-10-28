@@ -47,7 +47,7 @@ const MapControlButton = ({ label, onClick, active = false, children }) => (
     aria-label={label}
     title={label}
     aria-pressed={active || undefined}
-    className={`h-9 min-w-9 px-2.5 flex items-center justify-center gap-2 border bg-black font-mono text-[0.625rem] uppercase tracking-label transition-colors ${
+    className={`h-9 min-w-9 px-2.5 flex items-center justify-center gap-2 border bg-ink font-mono text-[0.625rem] uppercase tracking-label transition-colors ${
       active ? 'border-signal-line text-signal' : 'border-line-strong text-fg-muted hover:text-fg hover:border-line-bright'
     }`}
   >
@@ -151,7 +151,7 @@ const ISSMap = ({ telemetry, trajectory = [] }) => {
           <div class="relative w-8 h-8 flex items-center justify-center">
             <span class="absolute inset-x-0 top-1/2 h-px bg-fg"></span>
             <span class="absolute inset-y-0 left-1/2 w-px bg-fg"></span>
-            <span class="relative w-3 h-3 border border-fg bg-black"></span>
+            <span class="relative w-3 h-3 border border-fg bg-ink"></span>
           </div>
         `,
         iconSize: [32, 32],
@@ -381,10 +381,10 @@ const ISSMap = ({ telemetry, trajectory = [] }) => {
               <span className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 w-14 h-14 border border-fg/[0.12] rounded-full" />
               {autoCenter && telemetry && (
                 <>
-                  <span className="absolute left-3 top-1/2 -translate-y-[calc(100%+4px)] font-mono text-[0.625rem] text-fg-muted bg-black/70 px-1">
+                  <span className="absolute left-3 top-1/2 -translate-y-[calc(100%+4px)] font-mono text-[0.625rem] text-fg-muted bg-ink/70 px-1">
                     LAT {fmtCoord(telemetry.latitude, 'N', 'S')}
                   </span>
-                  <span className="absolute top-3 left-1/2 translate-x-1.5 font-mono text-[0.625rem] text-fg-muted bg-black/70 px-1">
+                  <span className="absolute top-3 left-1/2 translate-x-1.5 font-mono text-[0.625rem] text-fg-muted bg-ink/70 px-1">
                     LON {fmtCoord(telemetry.longitude, 'E', 'W')}
                   </span>
                 </>
@@ -394,7 +394,7 @@ const ISSMap = ({ telemetry, trajectory = [] }) => {
         </div>
 
         {/* Map Style Switcher (Top Left) */}
-        <div className="absolute top-4 left-4 z-[400] flex flex-wrap items-center bg-black border border-line-strong" role="group" aria-label="Map tiles">
+        <div className="absolute top-4 left-4 z-[400] flex flex-wrap items-center bg-ink border border-line-strong" role="group" aria-label="Map tiles">
           {Object.entries(TILE_LAYERS).map(([key, layer]) => (
             <button
               key={key}
@@ -437,7 +437,7 @@ const ISSMap = ({ telemetry, trajectory = [] }) => {
         </div>
 
         {/* Map Legend Overlay */}
-        <div className="absolute bottom-6 left-4 z-[400] bg-black/85 border border-line px-3 py-2 flex flex-wrap items-center gap-x-4 gap-y-1 font-mono text-[0.625rem] uppercase tracking-label text-fg-muted">
+        <div className="absolute bottom-6 left-4 z-[400] bg-ink/85 border border-line px-3 py-2 flex flex-wrap items-center gap-x-4 gap-y-1 font-mono text-[0.625rem] uppercase tracking-label text-fg-muted">
           <span className="flex items-center gap-2">
             <span className="w-2 h-2 bg-signal" aria-hidden="true" />
             ISS
@@ -447,7 +447,7 @@ const ISSMap = ({ telemetry, trajectory = [] }) => {
             Recent path
           </span>
           <span className="flex items-center gap-2">
-            <span className="w-3 h-2 bg-black border border-line-bright" aria-hidden="true" />
+            <span className="w-3 h-2 bg-ink border border-line-bright" aria-hidden="true" />
             Night
           </span>
           {gameMode && (
@@ -460,7 +460,7 @@ const ISSMap = ({ telemetry, trajectory = [] }) => {
       </div>
 
       {/* Guess the ISS Location: exercise panel */}
-      <section aria-label="Guess the ISS location game" className="border border-line bg-ink-900">
+      <section aria-label="Guess the ISS location game" className="border border-line surface">
         <div className="grid grid-cols-12 gap-6 p-5 sm:p-6 items-center">
           <div className="col-span-12 md:col-span-7 space-y-2">
             <div className="flex flex-wrap items-center gap-x-4 gap-y-1">
@@ -507,26 +507,26 @@ const ISSMap = ({ telemetry, trajectory = [] }) => {
         {/* Game Score Results */}
         {gameResult && (
           <dl className="grid grid-cols-2 lg:grid-cols-4 gap-px bg-line border-t border-line animate-fade-in">
-            <div className="bg-ink-900 p-5">
+            <div className="surface p-5">
               <dt className="label">Your guess</dt>
               <dd className="mt-2 telemetry text-sm text-fg">
                 {guessCoords.lat}°, {guessCoords.lng}°
               </dd>
             </div>
-            <div className="bg-ink-900 p-5">
+            <div className="surface p-5">
               <dt className="label">Actual ISS position</dt>
               <dd className="mt-2 telemetry text-sm text-fg">
                 {gameResult.actualLat}°, {gameResult.actualLng}°
               </dd>
             </div>
-            <div className="bg-ink-900 p-5">
+            <div className="surface p-5">
               <dt className="label">Distance</dt>
               <dd className="mt-2 telemetry text-2xl text-fg">
                 {gameResult.distanceKm.toLocaleString()}
                 <span className="ml-1 text-[0.6875rem] text-fg-muted">KM</span>
               </dd>
             </div>
-            <div className="bg-ink-900 p-5">
+            <div className="surface p-5">
               <dt className="label">Score &amp; rank</dt>
               <dd className="mt-2 telemetry text-2xl text-signal">
                 {gameResult.score}
