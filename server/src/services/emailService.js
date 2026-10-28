@@ -32,6 +32,15 @@ const createTransporter = () => {
   });
 };
 
+// User-supplied text must never be interpreted as HTML in the email body
+const escapeHtml = (value) =>
+  String(value)
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#39;');
+
 /**
  * Sends the real account verification email containing both:
  *  1) A 6-digit verification code (for instant entry on the Check Your Email screen)
@@ -61,7 +70,7 @@ export const sendVerificationEmail = async (user, rawToken, otpCode) => {
           <p style="color:#22d3ee;font-size:11px;letter-spacing:2px;text-transform:uppercase;margin:4px 0 0">Space &amp; Orbit Tracker</p>
         </div>
 
-        <h2 style="color:#ffffff;font-size:18px;margin-bottom:10px">Welcome aboard, ${user.name}!</h2>
+        <h2 style="color:#ffffff;font-size:18px;margin-bottom:10px">Welcome aboard, ${escapeHtml(user.name)}!</h2>
         <p style="color:#94a3b8;font-size:14px;line-height:1.6;margin-bottom:20px">
           Please verify your email address to activate your CosmicHorizon account. Enter this 6-digit verification code in the app:
         </p>

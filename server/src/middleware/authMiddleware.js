@@ -1,6 +1,7 @@
 import jwt from 'jsonwebtoken';
 import User from '../models/User.js';
 import { errorResponse } from '../utils/responseHandler.js';
+import { getJwtSecret } from '../utils/generateToken.js';
 
 /**
  * Protect routes - verifies JWT in Authorization header
@@ -14,10 +15,7 @@ export const protect = async (req, res, next) => {
   ) {
     try {
       token = req.headers.authorization.split(' ')[1];
-      const decoded = jwt.verify(
-        token,
-        process.env.JWT_SECRET || 'fallback_secret_for_dev_cosmichorizon'
-      );
+      const decoded = jwt.verify(token, getJwtSecret());
 
       const user = await User.findById(decoded.id).select('-password');
       if (!user) {
