@@ -1,5 +1,6 @@
 import dotenv from 'dotenv';
 dotenv.config();
+import dns from 'node:dns';
 import mongoose from 'mongoose';
 import User from './src/models/User.js';
 import Favorite from './src/models/Favorite.js';
@@ -8,7 +9,16 @@ import Watchlist from './src/models/Watchlist.js';
 const viewDatabase = async () => {
   try {
     const uri = process.env.MONGODB_URI || 'mongodb://127.0.0.1:27017/cosmichorizon';
-    await mongoose.connect(uri);
+    try {
+      await mongoose.connect(uri);
+    } catch (err) {
+      if (uri.startsWith('mongodb+srv://') && err.message?.includes('querySrv')) {
+        dns.setServers(['8.8.8.8', '1.1.1.1']);
+        await mongoose.connect(uri);
+      } else {
+        throw err;
+      }
+    }
 
     console.log('\n======================================================');
     console.log(`📡 Connected to Database: [ ${mongoose.connection.name} ]`);

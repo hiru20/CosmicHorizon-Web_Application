@@ -16,19 +16,29 @@ const allowedOrigins = [
 ].filter(Boolean);
 
 app.use(
-  cors({
-    origin: (origin, callback) => {
-      if (
-        !origin ||
-        allowedOrigins.includes(origin.replace(/\/$/, '')) ||
-        /\.vercel\.app$/.test(origin) ||
-        /\.onrender\.com$/.test(origin)
-      ) {
-        return callback(null, true);
+  cors((req, callback) => {
+    const origin = req.header('Origin');
+    const host = req.header('Host');
+    let originHost = null;
+    if (origin) {
+      try {
+        originHost = new URL(origin).host;
+      } catch {
+        originHost = null;
       }
-      return callback(new Error('Not allowed by CORS'));
-    },
-    credentials: true,
+    }
+
+    const isAllowed =
+      !origin ||
+      (host && originHost === host) ||
+      allowedOrigins.includes(origin.replace(/\/$/, '')) ||
+      /\.vercel\.app$/.test(origin) ||
+      /\.onrender\.com$/.test(origin);
+
+    if (isAllowed) {
+      return callback(null, { origin: true, credentials: true });
+    }
+    return callback(new Error('Not allowed by CORS'));
   })
 );
 app.use(express.json());
